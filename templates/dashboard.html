@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+    }
+    .bg-image {
+      background-image: url('/static/2641074.gif');
+      background-size: cover;
+      background-position: center;
+      height: 100%;
+    }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.5); /* Black with a bit of opacity */
+      color: white;
+      height: 100%;
+    }
+    .container {
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-image">
+    <div class="overlay">
+      <nav class="container-fluid">
+        <ul>
+          <li><strong>DataViz Dash</strong></li>
+        </ul>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#" role="button">Contact</a></li>
+        </ul>
+      </nav>
+      
+      <main class="container">
+        <form action="/upload" method="post" enctype="multipart/form-data">
+          <div class="grid">
+            <section>
+              <hgroup>
+                <h2>Data Upload</h2>
+                <h3>Visualize Your Excel Data</h3>
+              </hgroup>
+              <p>Upload your Excel file to visualize the data in interactive charts and graphs.</p>
+              <input type="file" id="fileUploader" name="file" accept=".xlsx" required>
+              <button type="submit">Upload</button>
+            </section>
+          </div>
+        </form>
+      </main>
+
+      <section aria-label="Instructions example">
+        <div class="container">
+          <article>
+            <hgroup>
+              <h2>Instructions</h2>
+              <h3>How to Use the Dashboard</h3>
+            </hgroup>
+            <p>1. Click the upload button and select your Excel file.<br>
+               2. Wait for the upload to complete.<br>
+               3. View and interact with your data visualizations.</p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="container">
+        <small>
+          <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a>
+        </small>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
+
