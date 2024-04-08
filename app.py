@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 # Use a static secret key for development; in production, consider using environment variables for security
 app.secret_key = 'your_development_secret_key'
-app.config["MONGO_URI"] = "mongodb+srv://Naman:DashWeb-Project@atlascluster.dwhh58a.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster"
+app.config["MONGO_URI"] = "your-url"
 mongo = PyMongo(app)
 
 login_manager = LoginManager()
