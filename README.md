@@ -1,70 +1,63 @@
-# DataViz-Dash
-A Flask-based web app enabling secure Excel file uploads, featuring user authentication and personalized data storage
+# DataViz Dash
 
-
-Certainly! Below is a simple README.md template for your project. Feel free to adjust it according to your project's specific requirements, setup instructions, or additional features.
-
-```markdown
-# Flask Excel Data Manager
-
-This project is a Flask-based web application designed for secure uploading and management of Excel data. It integrates user authentication and leverages MongoDB for efficient data storage, providing a seamless experience for users to upload, preview, and confirm their Excel data in a secure environment.
+DataViz Dash is a unique integration between a web application for data visualization and a Discord bot, designed to streamline data interaction and visualization directly within Discord and on a dedicated web platform. This project allows users to upload and visualize Excel data through interactive charts and graphs, with additional functionalities provided through a Discord interface for user verification and data interaction.
 
 ## Features
 
-- **User Authentication**: Secure login system to manage user sessions.
-- **Excel Upload**: Users can upload Excel files (.xlsx) and preview their content.
-- **Data Preview**: Before finalizing the upload, users can review the data.
-- **Secure Data Storage**: Confirmed uploads are stored in MongoDB, with data organized in user-specific collections.
+- **Data Visualization**: Upload Excel files via the web application to visualize data through interactive charts and graphs.
+- **Discord Integration**: Access data visualization functionalities and user verification directly within Discord.
+- **User Verification System**: Secure verification system for new users, integrating seamlessly with Discord and the web application.
+- **Sharded Discord Bot**: Utilizes sharding for enhanced performance and scalability across multiple Discord servers.
+- **Persistent Configuration**: Configuration and setup statuses are saved across bot restarts and server reboots, ensuring a seamless user experience.
 
 ## Getting Started
 
+These instructions will guide you in setting up DataViz Dash and the Discord bot on your local machine for development, testing, and deployment.
+
 ### Prerequisites
 
-Ensure you have Python 3 and pip installed on your system. You'll also need MongoDB set up either locally or hosted.
+- Python 3.8+
+- discord.py 2.0
+- Flask
+- MongoDB
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the Repository**:
    ```sh
-   git clone https://github.com/Naman794/DataViz-Dash.git
+   git clone https://github.com/naman794/dataviz-dash.git
+   cd dataviz-dash
    ```
-2. Navigate into the project directory:
-   ```sh
-   cd yourrepositoryname
-   ```
-3. Install the required Python packages:
+
+2. **Install Dependencies**:
    ```sh
    pip install -r requirements.txt
    ```
-4. Set environment variables for Flask and MongoDB URI (optional but recommended for production):
-   ```sh
-   export FLASK_APP=app.py
-   export FLASK_ENV=development  # Use 'production' with caution
-   export MONGO_URI="your_mongodb_uri"
+
+3. **Configure Your Application**:
+   Create a `config.py` with your Discord bot token and any other necessary configurations.
+
+4. **Run the Application**:
+   Start the web application and the Discord bot using:
+   ```bash
+   python main.py
    ```
-
-### Running the Application
-
-Run the Flask application with:
-```sh
-flask run
-```
-Or directly with Python:
-```sh
-python app.py
-```
 
 ## Usage
 
-After starting the application:
-1. Navigate to `http://localhost:5000/` to access the login page.
-2. Register or log in with your user credentials.
-3. Upload an Excel file and preview its content.
-4. Confirm the upload to store the data in MongoDB, or go back to discard it.
+### Web Application
+
+- Navigate to the web application via your browser to upload Excel files and visualize the data.
+- Access the dashboard to interact with uploaded data through dynamic charts and graphs.
+
+### Discord Bot
+
+- Use the `/setup` command in your server to configure the bot.
+- Verified users can interact with the bot to upload and visualize data directly within Discord.
 
 ## Contributing
 
-This project is currently **in development** and open for contributions. We aim to make it more robust, adding new features and improving existing functionality. If you're interested in contributing to the project, your input is welcome!
+This project is currently in development and open for contributions. We aim to make it more robust, adding new features and improving existing functionality. If you're interested in contributing to the project, your input is welcome!
 
 ### How to Contribute
 
@@ -77,12 +70,10 @@ We appreciate contributions of all forms, including bug reports, feature request
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
-## Contact
+## Acknowledgments
 
-Naman Sinha - namansinha794@gmail.com
-
-Project Link: [https://github.com/Naman794/DataViz-Dash](https://github.com/Naman794/DataViz-Dash)
-
+- Thanks to the contributors of discord.py for their extensive documentation.
+- Appreciation to all testers and users for their valuable feedback.
 
