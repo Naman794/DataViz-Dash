@@ -1,0 +1,32 @@
+body, html {
+    height: 100%;
+    margin: 0;
+  }
+  .bg-image {
+    background-image: url('/static/2641074.gif'); /* Adjust the URL as necessary */
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+  }
+  .overlay {
+    background-color: rgba(0, 0, 0, 0.5); /* Black with a bit of opacity */
+    color: white;
+    height: 100%;
+  }
+  .container, .login-container {
+    padding: 2rem;
+  }
+  .login-box {
+    background-color: rgba(0, 0, 0, 0.75);
+    padding: 1rem;
+    border-radius: 5px;
+    margin: 2rem auto;
+    width: fit-content;
+  }
+  .login-box input, .login-box button {
+    margin-top: 10px;
+  }
+  .login-box button {
+    cursor: pointer;
+  }
+  
