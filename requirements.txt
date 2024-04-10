@@ -1,5 +1,5 @@
 Flask==1.0.2
-Flask-login==0.6.3
+Flask-login
 pandas
 flask-pymongo
 discord
