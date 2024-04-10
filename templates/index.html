@@ -4,61 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DataViz Login</title>
-    <link rel="stylesheet" sizes="16x16" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    <link rel="icon" href="/static/dashlogo.png">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-        }
-        .bg-image {
-            background-image: url('/static/2641074.gif'); /* Placeholder for your actual image URL */
-            background-size: cover;
-            background-position: center;
-            height: 100%;
-        }
-        .overlay {
-            background-color: rgba(0, 0, 0, 0.5); /* Black with a bit of opacity */
-            color: white;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .container, .login-container {
-            padding: 2rem;
-        }
-        .login-box {
-            background-color: rgba(0, 0, 0, 0.75);
-            padding: 1rem;
-            border-radius: 5px;
-            margin: 2rem auto;
-            width: fit-content;
-        }
-        .login-box input, .login-box button {
-            margin-top: 10px;
-        }
-        .login-box button {
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
     <div class="bg-image">
         <div class="overlay">
             <div class="login-container">
                 <div class="login-box">
-                    <!-- Display flash messages -->
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                    <form action="/login" method="post">
+                    <p id="welcomeMessage"></p> <!-- Dynamic welcome message -->
+                    <form id="loginForm" action="/login" method="post">
                         <div>
                             <label for="username">Username:</label>
                             <input type="text" id="username" name="username" required>
@@ -66,6 +20,7 @@
                         <div>
                             <label for="password">Password:</label>
                             <input type="password" id="password" name="password" required>
+                            <button type="button" id="togglePassword">Show Password</button>
                         </div>
                         <div>
                             <button type="submit">Login</button>
@@ -75,5 +30,32 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Dynamic welcome message based on time of day
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const hour = new Date().getHours();
+        if (hour < 12) welcomeMessage.innerText = 'Good morning!';
+        else if (hour < 18) welcomeMessage.innerText = 'Good afternoon!';
+        else welcomeMessage.innerText = 'Good evening!';
+
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        togglePassword.addEventListener('click', () => {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            togglePassword.textContent = type === 'password' ? 'Show Password' : 'Hide Password';
+        });
+
+        // Form validation feedback (basic example)
+        const loginForm = document.getElementById('loginForm');
+        loginForm.addEventListener('submit', (e) => {
+            if (!loginForm.checkValidity()) {
+                e.preventDefault();
+                alert('Please fill out both username and password.');
+            }
+        });
+    </script>
 </body>
 </html>
