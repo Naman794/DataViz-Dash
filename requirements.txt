@@ -4,3 +4,6 @@ json
 os
 pandas
 flask-pymongo
+discord
+threading
+
