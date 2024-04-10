@@ -1,7 +1,7 @@
 Flask==1.0.2
 Flask-login
 pandas
-flask-pymongo
+pymongo
 discord
 threading
 
