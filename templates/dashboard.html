@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <title>DataViz Dash</title>
+  <link rel="stylesheet" sizes="16x16" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <link rel="icon" href="/static/favicon.png">
   <style>
     body, html {
       height: 100%;
@@ -31,16 +33,16 @@
       <nav class="container-fluid">
         <ul>
           <li><strong>DataViz Dash</strong></li>
-        </ul>
-        <ul>
           <li><a href="#">Home</a></li>
           <li><a href="#">About</a></li>
           <li><a href="#" role="button">Contact</a></li>
+          <!-- Logout Link -->
+          <li><a href="{{ url_for('logout') }}" role="button">Logout</a></li>
         </ul>
       </nav>
       
       <main class="container">
-        <form action="/upload" method="post" enctype="multipart/form-data">
+        <form action="/upload-excel" method="post" enctype="multipart/form-data">
           <div class="grid">
             <section>
               <hgroup>
@@ -48,7 +50,7 @@
                 <h3>Visualize Your Excel Data</h3>
               </hgroup>
               <p>Upload your Excel file to visualize the data in interactive charts and graphs.</p>
-              <input type="file" id="fileUploader" name="file" accept=".xlsx" required>
+              <input type="file" id="fileUploader" name="excel_file" accept=".xlsx" required>
               <button type="submit">Upload</button>
             </section>
           </div>
@@ -78,4 +80,3 @@
   </div>
 </body>
 </html>
-
