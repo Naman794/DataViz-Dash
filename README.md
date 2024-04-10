@@ -84,6 +84,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 Naman Sinha - namansinha794@gmail.com
 
 Project Link: [https://github.com/Naman794/DataViz-Dash](https://github.com/Naman794/DataViz-Dash)
-```
 
 
