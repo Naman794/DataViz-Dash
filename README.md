@@ -86,4 +86,4 @@ Naman Sinha - namansinha794@gmail.com
 Project Link: [https://github.com/Naman794/DataViz-Dash](https://github.com/Naman794/DataViz-Dash)
 ```
 
-Adjust the `Installation`, `Running the Application`, and `Contact` sections with your specific project details, setup instructions, and contact information. If your project uses a different setup or has additional features, make sure to include that information as well.
+
