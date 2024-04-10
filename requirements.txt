@@ -1,6 +1,6 @@
-flask 
+flask
 pandas
 pymongo
-discord
-threading
+discord.py
+flask-login
 
