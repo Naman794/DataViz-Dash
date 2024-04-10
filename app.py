@@ -1,22 +1,35 @@
-from flask import Flask, render_template, request, redirect, session, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import json
-import os
-from flask_pymongo import PyMongo
 import pandas as pd
 from tempfile import NamedTemporaryFile
-
+from werkzeug.utils import secure_filename
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+import os
 
 app = Flask(__name__)
-
-# Use a static secret key for development; in production, consider using environment variables for security
 app.secret_key = 'your_development_secret_key'
-app.config["MONGO_URI"] = "your-url"
-mongo = PyMongo(app)
+
+# MongoDB connection setup
+mongo_client = MongoClient('mongodb+srv://Naman:DashWeb-Project@dataviz.kegwtgt.mongodb.net/?retryWrites=true&w=majority&appName=DataViz', server_api=ServerApi('1'))
+db = mongo_client['UserDatas']  # Accessing the 'UserDatas' database
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+        self.username = username
+
+@login_manager.user_loader
+def user_loader(user_id):
+    users = load_user_credentials()
+    if user_id not in users:
+        return None
+    return User(user_id)
 
 def load_user_credentials():
     try:
@@ -28,17 +41,6 @@ def load_user_credentials():
     except json.JSONDecodeError:
         flash('Error decoding user credentials file.', 'error')
         return {}
-
-class User(UserMixin):
-    def __init__(self, username):
-        self.id = username
-
-@login_manager.user_loader
-def user_loader(user_id):
-    users = load_user_credentials()
-    if user_id not in users:
-        return None
-    return User(user_id)
 
 @app.route('/')
 @app.route('/login', methods=['GET', 'POST'])
@@ -58,56 +60,46 @@ def login():
             flash('Invalid username or password')
     return render_template('index.html')
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'xls', 'xlsx'}
 
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_and_preview():
-    if request.method == 'POST':
-        file = request.files['file']
-        if file and file.filename.endswith('.xlsx'):
-            temp = NamedTemporaryFile(delete=False, suffix='.xlsx')
-            file.save(temp.name)
-            session['uploaded_file_path'] = temp.name
-            # Read the first few rows to generate a preview
-            df = pd.read_excel(temp.name, nrows=5)
-            # Convert to HTML to render in the template
-            preview_html = df.to_html(index=False)
-            return render_template('preview.html', preview_html=preview_html)
-        else:
-            flash('Invalid file type. Please upload an Excel file.')
-            return redirect(url_for('upload_and_preview'))
-    return render_template('upload.html')
-
-
-
-
-@app.route('/process-upload', methods=['POST'])
-def process_upload():
-    decision = request.form.get('submit')
-    temp_file_path = session.get('uploaded_file_path', '')
-
-    if decision == 'Confirm' and os.path.exists(temp_file_path):
-        # Read the entire file this time
-        df = pd.read_excel(temp_file_path)
+@app.route('/upload-excel', methods=['POST'])
+@login_required
+def upload_excel():
+    if 'excel_file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    
+    file = request.files['excel_file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Create a NamedTemporaryFile and close it to avoid file lock on Windows
+        temp_file = NamedTemporaryFile(delete=False)
+        temp_file.close()
+        file.save(temp_file.name)
+        
+        df = pd.read_excel(temp_file.name)
         records = df.to_dict('records')
-
-        # Use "UserDatas" database and create a collection named after the user's username
-        user_collection = mongo.cx["UserDatas"][current_user.id]  # Adjusted to use current_user.id for collection name
+        
+        user_collection_name = current_user.username
+        user_collection = db[user_collection_name]
         user_collection.insert_many(records)
-        flash('Data successfully uploaded.')
+        
+        flash('File successfully uploaded and data stored in MongoDB.')
+        os.remove(temp_file.name)
 
-    # Cleanup
-    if os.path.exists(temp_file_path):
-        os.remove(temp_file_path)
-        session.pop('uploaded_file_path', None)
-
-    return redirect(url_for('dashboard' if decision == 'Confirm' else 'upload_and_preview'))
-
-
+        return redirect(url_for('dashboard'))
+    else:
+        flash('Invalid file type')
+        return redirect(request.url)
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Assuming 'dashboard.html' exists in the 'templates' directory
     return render_template('dashboard.html')
 
 @app.route('/logout')
@@ -117,4 +109,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=3000)
