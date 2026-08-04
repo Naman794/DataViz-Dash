@@ -1,0 +1,36 @@
+"""DataViz Dash application factory."""
+
+from flask import Flask, jsonify
+from pymongo.errors import PyMongoError
+
+from .config import Config
+from .database import init_database
+from .routes import bp
+
+
+def create_app(config_overrides=None):
+    app = Flask(
+        __name__,
+        static_folder="../static",
+        template_folder="../templates",
+    )
+    app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
+
+    init_database(app)
+    app.register_blueprint(bp)
+
+    @app.errorhandler(413)
+    def file_too_large(_error):
+        max_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+        return jsonify(error=f"File is too large. Maximum size is {max_mb} MB."), 413
+
+    @app.errorhandler(PyMongoError)
+    def database_error(error):
+        app.logger.exception("MongoDB operation failed", exc_info=error)
+        return jsonify(
+            error="The database is unavailable. Check your MongoDB connection."
+        ), 503
+
+    return app
