@@ -9,7 +9,6 @@ from io import BytesIO
 from flask import (
     Blueprint,
     Response,
-    current_app,
     jsonify,
     render_template,
     request,
@@ -19,9 +18,11 @@ from flask import (
 from pymongo.errors import PyMongoError
 from werkzeug.utils import secure_filename
 
+from .auth import current_user
 from .database import get_database
+from .plans import resolve_plan
 from .storage import Store
-from .tabular import DataValidationError, clean_frame, parse_upload
+from .tabular import DataLimitError, DataValidationError, clean_frame, parse_upload
 
 bp = Blueprint("main", __name__)
 CHART_TYPES = {"bar", "line", "area", "pie", "scatter", "histogram"}
@@ -40,13 +41,50 @@ def owner_id():
     return session["owner_id"]
 
 
+def active_plan():
+    return resolve_plan(current_user())
+
+
 def error(message, status=400):
     return jsonify(error=message), status
 
 
+def plan_limit_error(message, feature):
+    return (
+        jsonify(
+            error=message,
+            code="PLAN_LIMIT_REACHED",
+            feature=feature,
+            upgrade_url="/pricing",
+        ),
+        403,
+    )
+
+
+def count_label(count, singular, plural=None):
+    return f"{count} {singular if count == 1 else (plural or singular + 's')}"
+
+
 @bp.get("/")
 def index():
-    return render_template("index.html")
+    plan = active_plan()
+    return render_template(
+        "index.html",
+        plan=plan,
+        max_upload_mb=plan["max_upload_mb"],
+        max_dataset_rows=plan["max_dataset_rows"],
+        chart_row_limit=plan["chart_row_limit"],
+    )
+
+
+@bp.get("/pricing")
+def pricing():
+    return render_template(
+        "pricing.html",
+        plan=active_plan(),
+        free_plan=resolve_plan(),
+        pro_plan=resolve_plan({"plan": "pro"}),
+    )
 
 
 @bp.get("/api/health")
@@ -65,16 +103,37 @@ def list_datasets():
 
 @bp.post("/api/datasets")
 def upload_dataset():
+    plan = active_plan()
+    maximum_request_bytes = (plan["max_upload_mb"] + 1) * 1024 * 1024
+    if request.content_length and request.content_length > maximum_request_bytes:
+        message = f"File is too large. Maximum size is {plan['max_upload_mb']} MB."
+        if plan["name"] == "free":
+            return plan_limit_error(message, "upload_size")
+        return error(message, 413)
     upload = request.files.get("file")
     if upload is None:
         return error("Choose a CSV, XLS, or XLSX file.")
+    repository = store()
+    if repository.count_datasets(owner_id()) >= plan["max_datasets"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_datasets'], 'saved dataset')}.",
+            "saved_datasets",
+        )
     try:
-        frame = parse_upload(upload, current_app.config["MAX_DATASET_ROWS"])
+        frame = parse_upload(
+            upload,
+            plan["max_dataset_rows"],
+            max_bytes=plan["max_upload_mb"] * 1024 * 1024,
+        )
+    except DataLimitError as exc:
+        if plan["name"] == "free":
+            return plan_limit_error(str(exc), exc.feature)
+        return error(str(exc))
     except DataValidationError as exc:
         return error(str(exc))
 
     filename = secure_filename(upload.filename or "dataset") or "dataset"
-    repository = store()
     dataset = repository.create_dataset(owner_id(), filename, frame)
     stored_dataset = repository.get_dataset(owner_id(), dataset["id"])
     return jsonify(
@@ -91,7 +150,7 @@ def get_dataset(dataset_id):
         return error("Dataset not found.", 404)
 
     requested_limit = request.args.get("limit", 100, type=int)
-    limit = max(1, min(requested_limit, current_app.config["CHART_ROW_LIMIT"]))
+    limit = max(1, min(requested_limit, active_plan()["chart_row_limit"]))
     return jsonify(
         dataset=repository.serialize_dataset(dataset),
         rows=repository.get_rows(dataset, limit),
@@ -151,9 +210,22 @@ def list_dashboards():
 
 @bp.post("/api/dashboards")
 def create_dashboard():
-    payload, validation_error = validate_dashboard_payload(
-        request.get_json(silent=True)
-    )
+    plan = active_plan()
+    if store().count_dashboards(owner_id()) >= plan["max_dashboards"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_dashboards'], 'saved dashboard')}.",
+            "saved_dashboards",
+        )
+    raw_payload = request.get_json(silent=True) or {}
+    charts = raw_payload.get("charts")
+    if isinstance(charts, list) and len(charts) > plan["max_charts"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_charts'], 'chart')} per dashboard.",
+            "charts_per_dashboard",
+        )
+    payload, validation_error = validate_dashboard_payload(raw_payload)
     if validation_error:
         return error(validation_error)
     dashboard = store().create_dashboard(owner_id(), payload)
@@ -170,9 +242,16 @@ def get_dashboard(dashboard_id):
 
 @bp.put("/api/dashboards/<dashboard_id>")
 def update_dashboard(dashboard_id):
-    payload, validation_error = validate_dashboard_payload(
-        request.get_json(silent=True)
-    )
+    plan = active_plan()
+    raw_payload = request.get_json(silent=True) or {}
+    charts = raw_payload.get("charts")
+    if isinstance(charts, list) and len(charts) > plan["max_charts"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_charts'], 'chart')} per dashboard.",
+            "charts_per_dashboard",
+        )
+    payload, validation_error = validate_dashboard_payload(raw_payload)
     if validation_error:
         return error(validation_error)
     dashboard = store().update_dashboard(owner_id(), dashboard_id, payload)
@@ -190,6 +269,11 @@ def delete_dashboard(dashboard_id):
 
 @bp.get("/api/dashboards/<dashboard_id>/export")
 def export_dashboard(dashboard_id):
+    if not active_plan()["dashboard_exports"]:
+        return plan_limit_error(
+            "Dashboard JSON export is available on the Pro plan.",
+            "dashboard_json_export",
+        )
     dashboard = store().get_dashboard(owner_id(), dashboard_id)
     if dashboard is None:
         return error("Dashboard not found.", 404)
@@ -214,8 +298,12 @@ def validate_dashboard_payload(raw_payload):
     dataset = store().get_dataset(owner_id(), dataset_id)
     if dataset is None:
         return None, "Select a valid dataset."
-    if not isinstance(charts, list) or not 1 <= len(charts) <= 8:
-        return None, "A dashboard must contain between 1 and 8 charts."
+    max_charts = active_plan()["max_charts"]
+    if not isinstance(charts, list) or not 1 <= len(charts) <= max_charts:
+        return None, (
+            f"Your current plan supports between 1 and {max_charts} charts "
+            "per dashboard."
+        )
 
     validated_charts = []
     columns = set(dataset["columns"])

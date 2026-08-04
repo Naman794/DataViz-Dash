@@ -7,6 +7,14 @@ const state = {
   editingDashboardId: null,
 };
 
+const limits = {
+  maxUploadMb: Number(document.body.dataset.maxUploadMb),
+  maxDatasetRows: Number(document.body.dataset.maxDatasetRows),
+  chartRowLimit: Number(document.body.dataset.chartRowLimit),
+  maxCharts: Number(document.body.dataset.maxCharts),
+  dashboardExports: document.body.dataset.dashboardExports === "true",
+};
+
 const elements = {};
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -60,7 +68,10 @@ function bindEvents() {
   elements["chart-type"].addEventListener("change", updateChartFieldVisibility);
   elements["add-chart-button"].addEventListener("click", addChart);
   elements["save-dashboard-button"].addEventListener("click", saveDashboard);
-  elements["print-dashboard-button"].addEventListener("click", () => window.print());
+  elements["print-dashboard-button"].addEventListener("click", () => {
+    if (!limits.dashboardExports) return window.location.assign("/pricing");
+    window.print();
+  });
   elements["refresh-button"].addEventListener("click", refreshWorkspace);
 }
 
@@ -117,6 +128,10 @@ async function uploadFile(file) {
   const extension = file.name.split(".").pop().toLowerCase();
   if (!["csv", "xls", "xlsx"].includes(extension)) {
     showToast("Choose a CSV, XLS, or XLSX file.", true);
+    return;
+  }
+  if (file.size > limits.maxUploadMb * 1024 * 1024) {
+    showToast(`File is too large. Maximum size is ${limits.maxUploadMb} MB.`, true);
     return;
   }
 
@@ -340,7 +355,7 @@ async function loadBuilderDataset(datasetId, resetCharts = false) {
     return;
   }
   try {
-    const result = await api(`/api/datasets/${datasetId}?limit=10000`);
+    const result = await api(`/api/datasets/${datasetId}?limit=${limits.chartRowLimit}`);
     state.currentDataset = result.dataset;
     state.rows = result.rows;
     elements["dataset-select"].value = datasetId;
@@ -350,7 +365,9 @@ async function loadBuilderDataset(datasetId, resetCharts = false) {
       renderCharts();
     }
     updateChartColumnOptions(result.dataset.columns);
-    if (result.truncated) showToast("Charts use the first 10,000 rows of this dataset.");
+    if (result.truncated) {
+      showToast(`Charts use the first ${limits.chartRowLimit.toLocaleString()} rows of this dataset.`);
+    }
   } catch (error) {
     showToast(error.message, true);
   }
@@ -372,7 +389,9 @@ function updateChartFieldVisibility() {
 
 function addChart() {
   if (!state.currentDataset) return showToast("Select a dataset first.", true);
-  if (state.charts.length >= 8) return showToast("A dashboard can contain up to eight charts.", true);
+  if (state.charts.length >= limits.maxCharts) {
+    return showToast(`Your plan supports up to ${limits.maxCharts} charts per dashboard.`, true);
+  }
   const type = elements["chart-type"].value;
   const x = elements["x-column"].value;
   const y = type === "histogram" ? null : elements["y-column"].value || null;
@@ -536,7 +555,11 @@ function renderSavedDashboards() {
     const actions = document.createElement("div");
     actions.className = "saved-card-actions";
     const open = makeButton("Open", "button primary", () => openDashboard(dashboard.id));
-    const exportButton = makeButton("Export JSON", "button tertiary", () => window.location.assign(`/api/dashboards/${dashboard.id}/export`));
+    const exportButton = makeButton(
+      limits.dashboardExports ? "Export JSON" : "Export JSON · Pro",
+      "button tertiary",
+      () => window.location.assign(limits.dashboardExports ? `/api/dashboards/${dashboard.id}/export` : "/pricing"),
+    );
     const remove = makeButton("Delete", "button danger-ghost", () => removeDashboard(dashboard));
     actions.append(open, exportButton, remove);
     card.append(icon, title, meta, actions);

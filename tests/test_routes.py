@@ -1,5 +1,9 @@
 from io import BytesIO
 
+import mongomock
+
+from dataviz import create_app
+
 
 def upload_dataset(client):
     response = client.post(
@@ -20,6 +24,38 @@ def test_home_page_loads(client):
     response = client.get("/")
     assert response.status_code == 200
     assert b"Upload, preview and clean" in response.data
+    assert b"maximum 10 MB and 100 rows" in response.data
+
+
+def test_oversized_upload_returns_configured_limit():
+    mongo_client = mongomock.MongoClient()
+    application = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test-secret",
+            "MONGO_CLIENT": mongo_client,
+            "MONGO_DB_NAME": "dataviz_test",
+            "MAX_UPLOAD_MB": 1,
+            "MAX_CONTENT_LENGTH": 1024 * 1024,
+        }
+    )
+    user_id = mongo_client.dataviz_test.users.insert_one(
+        {"email": "pro@example.com", "password_hash": "unused", "plan": "pro"}
+    ).inserted_id
+    client = application.test_client()
+    with client.session_transaction() as session:
+        session["user_id"] = str(user_id)
+        session["owner_id"] = str(user_id)
+
+    response = client.post(
+        "/api/datasets",
+        data={"file": (BytesIO(b"x" * (2 * 1024 * 1024)), "large.csv")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 413
+    assert response.get_json()["error"] == "File is too large. Maximum size is 1 MB."
+    mongo_client.close()
 
 
 def test_dataset_clean_download_and_delete_flow(client):
@@ -77,9 +113,8 @@ def test_dashboard_save_update_export_and_delete(client):
     assert updated.get_json()["dashboard"]["title"] == payload["title"]
 
     exported = client.get(f"/api/dashboards/{dashboard['id']}/export")
-    assert exported.status_code == 200
-    assert exported.mimetype == "application/json"
-    assert b"Updated sales overview" in exported.data
+    assert exported.status_code == 403
+    assert exported.get_json()["code"] == "PLAN_LIMIT_REACHED"
 
     deleted = client.delete(f"/api/dashboards/{dashboard['id']}")
     assert deleted.status_code == 204
@@ -102,3 +137,54 @@ def test_invalid_upload_is_rejected(client):
     )
     assert response.status_code == 400
     assert "CSV" in response.get_json()["error"]
+
+
+def test_free_dataset_limit_returns_upgrade_response(client):
+    upload_dataset(client)
+    response = client.post(
+        "/api/datasets",
+        data={"file": (BytesIO(b"Value\n1\n"), "second.csv")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 403
+    assert response.get_json() == {
+        "error": "Your Free plan supports 1 saved dataset.",
+        "code": "PLAN_LIMIT_REACHED",
+        "feature": "saved_datasets",
+        "upgrade_url": "/pricing",
+    }
+
+
+def test_free_row_limit_returns_upgrade_response(client):
+    rows = b"Value\n" + b"1\n" * 101
+    response = client.post(
+        "/api/datasets",
+        data={"file": (BytesIO(rows), "too-many-rows.csv")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["feature"] == "dataset_rows"
+
+
+def test_free_chart_limit_returns_upgrade_response(client):
+    dataset = upload_dataset(client)
+    chart = {
+        "title": "Sales",
+        "type": "bar",
+        "x": "Region",
+        "y": "Sales",
+        "aggregation": "sum",
+    }
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Too many charts",
+            "dataset_id": dataset["id"],
+            "charts": [chart, chart, chart],
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["feature"] == "charts_per_dashboard"

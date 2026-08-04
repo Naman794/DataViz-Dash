@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account · DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <main class="public-shell">
+    <header class="public-header">
+      <a class="brand" href="{{ url_for('main.index') }}">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>DataViz <strong>Dash</strong></span>
+      </a>
+      <a class="button tertiary" href="{{ url_for('main.index') }}">Back to workspace</a>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack public-flashes">
+          {% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if user %}
+      <section class="account-card single-card">
+        <span class="eyebrow">YOUR ACCOUNT</span>
+        <h1>{{ user.email }}</h1>
+        <p>Your dashboards are attached to this account and remain available after signing back in.</p>
+        <div class="account-stats">
+          <div><span>Plan</span><strong>{{ account_plan.label }}</strong></div>
+          <div><span>Datasets</span><strong>{{ usage.datasets }} / {{ account_plan.max_datasets }}</strong></div>
+          <div><span>Dashboards</span><strong>{{ usage.dashboards }} / {{ account_plan.max_dashboards }}</strong></div>
+        </div>
+        <div class="account-actions">
+          <a class="button primary" href="{{ url_for('main.index') }}">Open workspace</a>
+          <a class="button tertiary" href="{{ url_for('main.pricing') }}">Compare plans</a>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button danger-ghost" type="submit">Sign out</button>
+          </form>
+        </div>
+      </section>
+    {% else %}
+      <div class="auth-grid">
+        <section class="account-card">
+          <span class="eyebrow">WELCOME BACK</span>
+          <h1>Sign in</h1>
+          <p>Continue with your saved datasets and dashboards.</p>
+          <form class="account-form" method="post" action="{{ url_for('auth.login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+            <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+            <button class="button primary full" type="submit">Sign in</button>
+          </form>
+        </section>
+
+        <section class="account-card accent-card">
+          <span class="eyebrow">FREE ACCOUNT</span>
+          <h1>Create an account</h1>
+          <p>Your current anonymous workspace will be moved into the new account.</p>
+          <form class="account-form" method="post" action="{{ url_for('auth.register') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+            <label class="field"><span>Password</span><input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required><small>Use at least 10 characters.</small></label>
+            <label class="field"><span>Confirm password</span><input name="password_confirmation" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
+            <button class="button secondary full" type="submit">Create free account</button>
+          </form>
+        </section>
+      </div>
+    {% endif %}
+  </main>
+</body>
+</html>

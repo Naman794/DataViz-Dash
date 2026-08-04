@@ -7,6 +7,8 @@ from bson import ObjectId
 
 from .tabular import column_types, frame_to_records, records_to_frame
 
+ROW_INSERT_BATCH_SIZE = 1000
+
 
 def utc_now():
     return datetime.now(timezone.utc)
@@ -32,6 +34,7 @@ class Store:
         try:
             self._insert_rows(dataset_id, frame)
         except Exception:
+            self.db.dataset_rows.delete_many({"dataset_id": dataset_id})
             self.db.datasets.delete_one({"_id": dataset_id})
             raise
         metadata["_id"] = dataset_id
@@ -40,6 +43,9 @@ class Store:
     def list_datasets(self, owner_id: str):
         documents = self.db.datasets.find({"owner_id": owner_id}).sort("updated_at", -1)
         return [self.serialize_dataset(document) for document in documents]
+
+    def count_datasets(self, owner_id: str) -> int:
+        return self.db.datasets.count_documents({"owner_id": owner_id})
 
     def get_dataset(self, owner_id: str, dataset_id: str):
         object_id = self._object_id(dataset_id)
@@ -125,6 +131,41 @@ class Store:
         )
         return [self.serialize_dashboard(document) for document in documents]
 
+    def count_dashboards(self, owner_id: str) -> int:
+        return self.db.dashboards.count_documents({"owner_id": owner_id})
+
+    def create_user(self, email: str, password_hash: str):
+        now = utc_now()
+        document = {
+            "email": email,
+            "password_hash": password_hash,
+            "plan": "free",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db.users.insert_one(document)
+        document["_id"] = result.inserted_id
+        return document
+
+    def get_user(self, user_id: str):
+        object_id = self._object_id(user_id)
+        if object_id is None:
+            return None
+        return self.db.users.find_one({"_id": object_id})
+
+    def get_user_by_email(self, email: str):
+        return self.db.users.find_one({"email": email})
+
+    def claim_workspace(self, previous_owner_id: str, user_id: str):
+        if not previous_owner_id or previous_owner_id == user_id:
+            return
+        self.db.datasets.update_many(
+            {"owner_id": previous_owner_id}, {"$set": {"owner_id": user_id}}
+        )
+        self.db.dashboards.update_many(
+            {"owner_id": previous_owner_id}, {"$set": {"owner_id": user_id}}
+        )
+
     def get_dashboard(self, owner_id: str, dashboard_id: str):
         object_id = self._object_id(dashboard_id)
         if object_id is None:
@@ -140,12 +181,16 @@ class Store:
         return result.deleted_count == 1
 
     def _insert_rows(self, dataset_id: ObjectId, frame: pd.DataFrame):
-        records = frame_to_records(frame)
-        if records:
+        for start in range(0, len(frame), ROW_INSERT_BATCH_SIZE):
+            records = frame_to_records(frame.iloc[start : start + ROW_INSERT_BATCH_SIZE])
             self.db.dataset_rows.insert_many(
                 [
-                    {"dataset_id": dataset_id, "position": index, "data": record}
-                    for index, record in enumerate(records)
+                    {
+                        "dataset_id": dataset_id,
+                        "position": start + offset,
+                        "data": record,
+                    }
+                    for offset, record in enumerate(records)
                 ]
             )
 

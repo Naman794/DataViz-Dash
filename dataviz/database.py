@@ -19,6 +19,7 @@ def init_database(app):
     app.extensions["mongo_db"] = database
 
     try:
+        database.users.create_index("email", unique=True)
         database.datasets.create_index(
             [("owner_id", ASCENDING), ("updated_at", DESCENDING)]
         )
