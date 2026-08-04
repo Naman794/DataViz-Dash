@@ -16,7 +16,17 @@ class DataValidationError(ValueError):
     """Raised when uploaded data or a cleaning request is invalid."""
 
 
-def parse_upload(upload, max_rows: int) -> pd.DataFrame:
+class DataLimitError(DataValidationError):
+    """Raised when an upload exceeds a configurable capacity entitlement."""
+
+    def __init__(self, message: str, feature: str):
+        super().__init__(message)
+        self.feature = feature
+
+
+def parse_upload(
+    upload, max_rows: int, max_bytes: int | None = None
+) -> pd.DataFrame:
     filename = upload.filename or ""
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
@@ -25,20 +35,26 @@ def parse_upload(upload, max_rows: int) -> pd.DataFrame:
     payload = upload.read()
     if not payload:
         raise DataValidationError("The uploaded file is empty.")
+    if max_bytes is not None and len(payload) > max_bytes:
+        max_mb = max_bytes // (1024 * 1024)
+        raise DataLimitError(
+            f"File is too large. Maximum size is {max_mb} MB.", "upload_size"
+        )
 
     try:
         if extension == ".csv":
-            frame = pd.read_csv(BytesIO(payload))
+            frame = pd.read_csv(BytesIO(payload), nrows=max_rows + 1)
         else:
-            frame = pd.read_excel(BytesIO(payload))
+            frame = pd.read_excel(BytesIO(payload), nrows=max_rows + 1)
     except Exception as exc:
         raise DataValidationError(
             "The file could not be read. Check that it is a valid spreadsheet."
         ) from exc
 
     if len(frame) > max_rows:
-        raise DataValidationError(
-            f"This MVP supports up to {max_rows:,} rows per dataset."
+        raise DataLimitError(
+            f"This workspace supports up to {max_rows:,} rows per dataset.",
+            "dataset_rows",
         )
     if frame.empty and len(frame.columns) == 0:
         raise DataValidationError("The file does not contain a table.")

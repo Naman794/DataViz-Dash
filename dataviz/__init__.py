@@ -3,6 +3,7 @@
 from flask import Flask, jsonify
 from pymongo.errors import PyMongoError
 
+from .auth import bp as auth_bp
 from .config import Config
 from .database import init_database
 from .routes import bp
@@ -20,10 +21,11 @@ def create_app(config_overrides=None):
 
     init_database(app)
     app.register_blueprint(bp)
+    app.register_blueprint(auth_bp)
 
     @app.errorhandler(413)
     def file_too_large(_error):
-        max_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+        max_mb = app.config["MAX_UPLOAD_MB"]
         return jsonify(error=f"File is too large. Maximum size is {max_mb} MB."), 413
 
     @app.errorhandler(PyMongoError)

@@ -36,6 +36,15 @@ def test_parse_enforces_row_limit():
         parse_upload(upload("sample.csv", b"Value\n1\n2\n3\n"), max_rows=2)
 
 
+def test_parse_enforces_file_size_limit():
+    with pytest.raises(DataValidationError, match="Maximum size is 1 MB"):
+        parse_upload(
+            upload("sample.csv", b"Value\n" + (b"1\n" * 600_000)),
+            max_rows=1_000_000,
+            max_bytes=1024 * 1024,
+        )
+
+
 def test_clean_frame_applies_selected_mvp_operations():
     frame = pd.DataFrame(
         [

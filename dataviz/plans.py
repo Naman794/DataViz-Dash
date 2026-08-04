@@ -1,0 +1,41 @@
+"""Plan definitions and entitlement resolution."""
+
+from flask import current_app
+
+
+def resolve_plan(user=None) -> dict:
+    """Return server-enforced limits for the current account plan."""
+    plan_name = "pro" if user and user.get("plan") == "pro" else "free"
+    if plan_name == "pro":
+        return {
+            "name": "pro",
+            "label": "Pro",
+            "max_upload_mb": current_app.config["MAX_UPLOAD_MB"],
+            "max_dataset_rows": current_app.config["MAX_DATASET_ROWS"],
+            "max_datasets": current_app.config["PRO_DATASET_LIMIT"],
+            "max_dashboards": current_app.config["PRO_DASHBOARD_LIMIT"],
+            "max_charts": current_app.config["PRO_CHART_LIMIT"],
+            "chart_row_limit": current_app.config["CHART_ROW_LIMIT"],
+            "dashboard_exports": True,
+        }
+
+    return {
+        "name": "free",
+        "label": "Free",
+        "max_upload_mb": min(
+            current_app.config["FREE_UPLOAD_MB"],
+            current_app.config["MAX_UPLOAD_MB"],
+        ),
+        "max_dataset_rows": min(
+            current_app.config["FREE_DATASET_ROWS"],
+            current_app.config["MAX_DATASET_ROWS"],
+        ),
+        "max_datasets": current_app.config["FREE_DATASET_LIMIT"],
+        "max_dashboards": current_app.config["FREE_DASHBOARD_LIMIT"],
+        "max_charts": current_app.config["FREE_CHART_LIMIT"],
+        "chart_row_limit": min(
+            current_app.config["FREE_CHART_ROW_LIMIT"],
+            current_app.config["CHART_ROW_LIMIT"],
+        ),
+        "dashboard_exports": False,
+    }
