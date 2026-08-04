@@ -1,0 +1,27 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - dataviz-mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: local-docker-key-change-before-deployment
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB_NAME: dataviz_dash
+    ports:
+      - "5000:5000"
+
+volumes:
+  dataviz-mongodb:

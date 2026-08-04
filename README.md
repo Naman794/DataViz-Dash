@@ -1,79 +1,95 @@
 # DataViz Dash
 
-DataViz Dash is a unique integration between a web application for data visualization and a Discord bot, designed to streamline data interaction and visualization directly within Discord and on a dedicated web platform. This project allows users to upload and visualize Excel data through interactive charts and graphs, with additional functionalities provided through a Discord interface for user verification and data interaction.
+DataViz Dash is a local-first Flask application for turning CSV and Excel files into clean, interactive dashboards. The MVP does not require accounts and never creates public share links.
 
-## Features
+## MVP features
 
-- **Data Visualization**: Upload Excel files via the web application to visualize data through interactive charts and graphs.
-- **Discord Integration**: Access data visualization functionalities and user verification directly within Discord.
-- **User Verification System**: Secure verification system for new users, integrating seamlessly with Discord and the web application.
-- **Sharded Discord Bot**: Utilizes sharding for enhanced performance and scalability across multiple Discord servers.
-- **Persistent Configuration**: Configuration and setup statuses are saved across bot restarts and server reboots, ensuring a seamless user experience.
+- Upload and preview `.csv`, `.xls`, and `.xlsx` files.
+- Rename or remove columns.
+- Fill missing values or delete rows with missing values.
+- Remove duplicate and completely empty rows.
+- Download the cleaned dataset as CSV.
+- Build bar, line, area, pie, scatter, and histogram charts.
+- Save up to eight charts in a MongoDB-backed dashboard.
+- Export chart PNGs, print/save a dashboard as PDF, or download dashboard JSON.
 
-## Getting Started
+Anonymous ownership is stored in a signed browser cookie. Saved data is only visible to the browser workspace that created it. Clearing that cookie creates a new workspace.
 
-These instructions will guide you in setting up DataViz Dash and the Discord bot on your local machine for development, testing, and deployment.
+## Quick start with Docker
 
-### Prerequisites
+Docker is the simplest option because it starts both MongoDB and the web application.
 
-- Python 3.8+
-- discord.py 2.0
-- Flask
-- MongoDB
+```bash
+docker compose up --build
+```
 
-### Installation
+Open [http://localhost:5000](http://localhost:5000). Stop the application with `Ctrl+C`.
 
-1. **Clone the Repository**:
-   ```sh
-   git clone https://github.com/naman794/dataviz-dash.git
-   cd dataviz-dash
-   ```
+## Run with local Python
 
-2. **Install Dependencies**:
-   ```sh
-   pip install -r requirements.txt
-   ```
+Requirements: Python 3.10+ and a running MongoDB instance.
 
-3. **Configure Your Application**:
-   Create a `config.py` with your Discord bot token and any other necessary configurations.
+```bash
+python -m venv .venv
+```
 
-4. **Run the Application**:
-   Start the web application and the Discord bot using:
-   ```bash
-   python main.py
-   ```
+Activate the environment:
 
-## Usage
+```bash
+# macOS/Linux
+source .venv/bin/activate
 
-### Web Application
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
 
-- Navigate to the web application via your browser to upload Excel files and visualize the data.
-- Access the dashboard to interact with uploaded data through dynamic charts and graphs.
+Install and run:
 
-### Discord Bot
+```bash
+python -m pip install -r requirements.txt
+cp .env.example .env
+python app.py
+```
 
-- Use the `/setup` command in your server to configure the bot.
-- Verified users can interact with the bot to upload and visualize data directly within Discord.
+On Windows, copy `.env.example` to `.env` manually. The defaults connect to MongoDB at `mongodb://localhost:27017`.
 
-## Contributing
+## Configuration
 
-This project is currently in development and open for contributions. We aim to make it more robust, adding new features and improving existing functionality. If you're interested in contributing to the project, your input is welcome!
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SECRET_KEY` | Local development value | Signs the anonymous workspace cookie. Change it outside local development. |
+| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection string. |
+| `MONGO_DB_NAME` | `dataviz_dash` | Database name. |
+| `MAX_UPLOAD_MB` | `10` | Maximum uploaded file size. |
+| `MAX_DATASET_ROWS` | `10000` | Maximum rows accepted per dataset. |
+| `CHART_ROW_LIMIT` | `10000` | Maximum rows returned to the chart builder. |
 
-### How to Contribute
+## Tests
 
-1. **Fork the Repository**: Start by forking the repository to your GitHub account.
-2. **Create a Branch**: Create a branch in your forked repository for your feature or fix.
-3. **Commit Your Changes**: Make your changes in your branch and commit them.
-4. **Submit a Pull Request**: Push your changes to your fork and submit a pull request to the main project. Include a clear description of your changes and any other relevant information.
+Tests use an in-memory MongoDB replacement and do not touch a real database.
 
-We appreciate contributions of all forms, including bug reports, feature requests, documentation improvements, and code updates. Before submitting your contribution, please review any guidelines specified in the repository or contact the project maintainers.
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check app.py dataviz tests
+python -m pytest -q
+```
 
-## License
+## Project structure
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+```text
+dataviz/
+  __init__.py       Flask application factory
+  config.py         Environment configuration
+  database.py       MongoDB connection and indexes
+  routes.py         Web and JSON API routes
+  storage.py        Dataset and dashboard persistence
+  tabular.py        Spreadsheet parsing and cleaning
+static/             Browser JavaScript and styles
+templates/          Application shell
+tests/              Unit and API tests
+app.py              Local and WSGI entry point
+```
 
-## Acknowledgments
+## Security note
 
-- Thanks to the contributors of discord.py for their extensive documentation.
-- Appreciation to all testers and users for their valuable feedback.
-
+An old MongoDB credential was committed in earlier repository history. Removing it from the current source does not invalidate it. Delete or rotate that Atlas database user before using this repository again, and keep all future credentials in environment variables.

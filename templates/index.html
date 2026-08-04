@@ -1,61 +1,239 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DataViz Login</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Clean spreadsheet data and turn it into interactive dashboards.">
+  <title>DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <div class="bg-image">
-        <div class="overlay">
-            <div class="login-container">
-                <div class="login-box">
-                    <p id="welcomeMessage"></p> <!-- Dynamic welcome message -->
-                    <form id="loginForm" action="/login" method="post">
-                        <div>
-                            <label for="username">Username:</label>
-                            <input type="text" id="username" name="username" required>
-                        </div>
-                        <div>
-                            <label for="password">Password:</label>
-                            <input type="password" id="password" name="password" required>
-                            <button type="button" id="togglePassword">Show Password</button>
-                        </div>
-                        <div>
-                            <button type="submit">Login</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="DataViz Dash home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>DataViz <strong>Dash</strong></span>
+      </a>
+
+      <nav class="nav-list" aria-label="Workspace navigation">
+        <button class="nav-item active" data-view="data-view">
+          <span class="nav-icon">⇧</span><span>Data workspace</span>
+        </button>
+        <button class="nav-item" data-view="builder-view">
+          <span class="nav-icon">⌁</span><span>Chart builder</span>
+        </button>
+        <button class="nav-item" data-view="saved-view">
+          <span class="nav-icon">▦</span><span>Saved dashboards</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Local workspace</strong>
+          <small>Your files are not publicly shared.</small>
         </div>
-    </div>
+      </div>
+    </aside>
 
-    <script>
-        // Dynamic welcome message based on time of day
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const hour = new Date().getHours();
-        if (hour < 12) welcomeMessage.innerText = 'Good morning!';
-        else if (hour < 18) welcomeMessage.innerText = 'Good afternoon!';
-        else welcomeMessage.innerText = 'Good evening!';
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ANALYTICS WORKSPACE</p>
+          <h1 id="page-title">Prepare your data</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="db-status" id="db-status"><span></span> Checking database</span>
+          <button class="icon-button" id="refresh-button" title="Refresh workspace" aria-label="Refresh workspace">↻</button>
+        </div>
+      </header>
 
-        // Toggle password visibility
-        const togglePassword = document.getElementById('togglePassword');
-        const password = document.getElementById('password');
-        togglePassword.addEventListener('click', () => {
-            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-            password.setAttribute('type', type);
-            togglePassword.textContent = type === 'password' ? 'Show Password' : 'Hide Password';
-        });
+      <section id="data-view" class="view active">
+        <div class="intro-row">
+          <div>
+            <h2>Upload, preview and clean</h2>
+            <p>Start with a CSV or Excel file, then prepare it for visualisation.</p>
+          </div>
+          <span class="step-badge">Step 1 of 2</span>
+        </div>
 
-        // Form validation feedback (basic example)
-        const loginForm = document.getElementById('loginForm');
-        loginForm.addEventListener('submit', (e) => {
-            if (!loginForm.checkValidity()) {
-                e.preventDefault();
-                alert('Please fill out both username and password.');
-            }
-        });
-    </script>
+        <div class="upload-card" id="upload-card">
+          <input id="file-input" type="file" accept=".csv,.xls,.xlsx" hidden>
+          <div class="upload-icon" aria-hidden="true">⇧</div>
+          <h3>Drop your spreadsheet here</h3>
+          <p>CSV, XLS or XLSX · maximum 10 MB and 10,000 rows</p>
+          <button class="button primary" id="choose-file-button">Choose file</button>
+          <div class="upload-progress hidden" id="upload-progress"><span></span></div>
+        </div>
+
+        <div class="dataset-toolbar">
+          <label class="field grow">
+            <span>Active dataset</span>
+            <select id="dataset-select">
+              <option value="">Upload a dataset to begin</option>
+            </select>
+          </label>
+          <button class="button secondary" id="download-data-button" disabled>Download CSV</button>
+          <button class="button danger-ghost" id="delete-data-button" disabled>Delete</button>
+        </div>
+
+        <div id="dataset-workspace" class="hidden">
+          <div class="stat-grid">
+            <article class="stat-card">
+              <span>Rows</span><strong id="row-count">0</strong><small>available for analysis</small>
+            </article>
+            <article class="stat-card">
+              <span>Columns</span><strong id="column-count">0</strong><small>detected fields</small>
+            </article>
+            <article class="stat-card accent">
+              <span>Preview</span><strong id="preview-count">0</strong><small>rows shown below</small>
+            </article>
+          </div>
+
+          <div class="section-heading">
+            <div><h2>Cleaning rules</h2><p>Apply changes to the entire dataset.</p></div>
+          </div>
+
+          <div class="cleaning-grid">
+            <article class="panel">
+              <div class="panel-heading"><span class="panel-number">1</span><div><h3>Columns</h3><p>Rename fields or remove ones you do not need.</p></div></div>
+              <div id="column-rules" class="column-rules"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading"><span class="panel-number">2</span><div><h3>Missing values</h3><p>Fill blanks or delete incomplete rows.</p></div></div>
+              <label class="field">
+                <span>Action</span>
+                <select id="missing-strategy">
+                  <option value="none">Leave missing values unchanged</option>
+                  <option value="fill">Fill missing values</option>
+                  <option value="drop">Delete rows with missing values</option>
+                </select>
+              </label>
+              <label class="field hidden" id="fill-value-field">
+                <span>Replacement value</span>
+                <input id="fill-value" type="text" placeholder="Example: Unknown or 0">
+              </label>
+              <fieldset class="check-list">
+                <legend>Apply to columns</legend>
+                <div id="missing-columns"></div>
+              </fieldset>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading"><span class="panel-number">3</span><div><h3>Invalid rows</h3><p>Remove repeated or completely empty records.</p></div></div>
+              <label class="toggle-row">
+                <span><strong>Remove duplicates</strong><small>Keep the first identical row</small></span>
+                <input id="remove-duplicates" type="checkbox">
+              </label>
+              <label class="toggle-row">
+                <span><strong>Remove empty rows</strong><small>Delete rows with no values</small></span>
+                <input id="remove-empty" type="checkbox" checked>
+              </label>
+            </article>
+          </div>
+
+          <div class="action-row">
+            <p id="cleaning-summary">No cleaning changes applied yet.</p>
+            <button class="button primary" id="apply-cleaning-button">Apply cleaning</button>
+          </div>
+
+          <article class="table-panel">
+            <div class="panel-heading table-heading">
+              <div><h3>Data preview</h3><p>The first 100 rows of your current dataset.</p></div>
+            </div>
+            <div class="table-scroll"><table id="preview-table"></table></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="builder-view" class="view">
+        <div class="intro-row">
+          <div><h2>Build your dashboard</h2><p>Add up to eight interactive charts and save the layout.</p></div>
+          <span class="step-badge">Step 2 of 2</span>
+        </div>
+
+        <div class="builder-layout">
+          <aside class="builder-controls panel">
+            <label class="field">
+              <span>Dashboard title</span>
+              <input id="dashboard-title" type="text" maxlength="100" placeholder="Monthly sales overview">
+            </label>
+            <label class="field">
+              <span>Dataset</span>
+              <select id="builder-dataset-select"><option value="">Select a dataset</option></select>
+            </label>
+            <div class="divider"></div>
+            <h3>Add a chart</h3>
+            <label class="field">
+              <span>Chart title</span>
+              <input id="chart-title" type="text" maxlength="100" placeholder="Revenue by region">
+            </label>
+            <label class="field">
+              <span>Chart type</span>
+              <select id="chart-type">
+                <option value="bar">Bar chart</option>
+                <option value="line">Line chart</option>
+                <option value="area">Area chart</option>
+                <option value="pie">Pie chart</option>
+                <option value="scatter">Scatter plot</option>
+                <option value="histogram">Histogram</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>X-axis / category</span>
+              <select id="x-column"><option value="">Select a column</option></select>
+            </label>
+            <label class="field" id="y-column-field">
+              <span>Y-axis / value</span>
+              <select id="y-column"><option value="">Count records</option></select>
+            </label>
+            <label class="field" id="aggregation-field">
+              <span>Aggregation</span>
+              <select id="aggregation">
+                <option value="none">No aggregation</option>
+                <option value="count">Count</option>
+                <option value="sum">Sum</option>
+                <option value="average">Average</option>
+              </select>
+            </label>
+            <button class="button secondary full" id="add-chart-button">＋ Add chart</button>
+          </aside>
+
+          <div class="dashboard-canvas">
+            <div class="canvas-toolbar">
+              <div><span id="chart-count">0 charts</span><small>Drag-free responsive layout</small></div>
+              <div>
+                <button class="button tertiary" id="print-dashboard-button" disabled>Print / PDF</button>
+                <button class="button primary" id="save-dashboard-button" disabled>Save dashboard</button>
+              </div>
+            </div>
+            <div id="chart-grid" class="chart-grid">
+              <div class="empty-state">
+                <span>⌁</span><h3>Your charts will appear here</h3>
+                <p>Select a dataset and configure the first chart.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="saved-view" class="view">
+        <div class="intro-row">
+          <div><h2>Saved dashboards</h2><p>Open, export or delete dashboards saved in this browser workspace.</p></div>
+        </div>
+        <div id="saved-grid" class="saved-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </body>
 </html>
