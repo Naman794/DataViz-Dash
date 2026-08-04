@@ -2,6 +2,7 @@ from io import BytesIO
 
 import mongomock
 
+import dataviz.storage as storage_module
 from dataviz import create_app
 
 
@@ -137,6 +138,19 @@ def test_invalid_upload_is_rejected(client):
     )
     assert response.status_code == 400
     assert "CSV" in response.get_json()["error"]
+
+
+def test_unstorable_wide_row_returns_a_clear_error(client, monkeypatch):
+    monkeypatch.setattr(storage_module, "ROW_CHUNK_TARGET_BYTES", 100)
+
+    response = client.post(
+        "/api/datasets",
+        data={"file": (BytesIO(b"Value\n" + b"x" * 200), "wide.csv")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert "row is too large" in response.get_json()["error"]
 
 
 def test_free_dataset_limit_returns_upgrade_response(client):

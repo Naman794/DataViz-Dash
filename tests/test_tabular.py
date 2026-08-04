@@ -36,6 +36,14 @@ def test_parse_enforces_row_limit():
         parse_upload(upload("sample.csv", b"Value\n1\n2\n3\n"), max_rows=2)
 
 
+def test_parse_accepts_exactly_fifty_thousand_csv_rows():
+    content = b"Region,Value\n" + b"North,1\n" * 50_000
+
+    frame = parse_upload(upload("large.csv", content), max_rows=50_000)
+
+    assert len(frame) == 50_000
+
+
 def test_parse_enforces_file_size_limit():
     with pytest.raises(DataValidationError, match="Maximum size is 1 MB"):
         parse_upload(

@@ -11,7 +11,11 @@ def init_database(app):
         client = MongoClient(
             app.config["MONGO_URI"],
             connect=False,
-            serverSelectionTimeoutMS=3000,
+            serverSelectionTimeoutMS=app.config[
+                "MONGO_SERVER_SELECTION_TIMEOUT_MS"
+            ],
+            connectTimeoutMS=app.config["MONGO_CONNECT_TIMEOUT_MS"],
+            socketTimeoutMS=app.config["MONGO_SOCKET_TIMEOUT_MS"],
         )
 
     database = client[app.config["MONGO_DB_NAME"]]
@@ -29,9 +33,10 @@ def init_database(app):
         database.dashboards.create_index(
             [("owner_id", ASCENDING), ("updated_at", DESCENDING)]
         )
-    except PyMongoError:
+    except PyMongoError as exc:
         app.logger.warning(
-            "MongoDB was not reachable during startup; requests will retry later."
+            "MongoDB was not reachable during startup; requests will retry later: %s",
+            exc,
         )
 
 
