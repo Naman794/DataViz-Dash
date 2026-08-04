@@ -21,11 +21,25 @@ def upload_dataset(client):
     return response.get_json()["dataset"]
 
 
-def test_home_page_loads(client):
+def test_landing_page_loads(client):
     response = client.get("/")
+    assert response.status_code == 200
+    assert b"Turn spreadsheets into clear, interactive dashboards" in response.data
+    assert b'href="/app"' in response.data
+    assert b">50,000<" in response.data
+    assert b"rows on Pro" in response.data
+    assert b"No account required" in response.data
+
+    assert client.get("/static/images/data-workspace.png").status_code == 200
+    assert client.get("/static/images/chart-builder.png").status_code == 200
+
+
+def test_workspace_page_loads(client):
+    response = client.get("/app")
     assert response.status_code == 200
     assert b"Upload, preview and clean" in response.data
     assert b"maximum 10 MB and 100 rows" in response.data
+    assert b'href="/"' in response.data
 
 
 def test_oversized_upload_returns_configured_limit():

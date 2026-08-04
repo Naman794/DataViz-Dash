@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Upload, clean and visualise CSV and Excel data in a private, no-code analytics workspace.">
+  <title>DataViz Dash — Spreadsheets to dashboards, without the complexity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body class="landing-body">
+  <header class="landing-nav-wrap">
+    <nav class="landing-nav landing-container" aria-label="Main navigation">
+      <a class="brand" href="{{ url_for('main.landing') }}" aria-label="DataViz Dash home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>DataViz <strong>Dash</strong></span>
+      </a>
+      <div class="landing-links">
+        <a href="#workflow">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#plans">Plans</a>
+      </div>
+      <div class="landing-actions">
+        <a class="landing-sign-in" href="{{ url_for('auth.account') }}">
+          {{ account_user.email if account_user else 'Sign in' }}
+        </a>
+        <a class="button primary landing-nav-cta" href="{{ url_for('main.index') }}">Open workspace</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="landing-hero">
+      <div class="hero-glow hero-glow-one" aria-hidden="true"></div>
+      <div class="hero-glow hero-glow-two" aria-hidden="true"></div>
+      <div class="landing-container hero-grid">
+        <div class="hero-copy">
+          <div class="hero-pill"><span></span> No-code analytics workspace</div>
+          <h1>Turn spreadsheets into clear, interactive dashboards</h1>
+          <p class="hero-lead">Upload Excel or CSV data, clean it without formulas, and build presentation-ready charts in one focused workspace.</p>
+          <div class="hero-actions">
+            <a class="button primary hero-primary" href="{{ url_for('main.index') }}">Start building free <span>→</span></a>
+            <a class="button hero-secondary" href="#product">See the product</a>
+          </div>
+          <div class="hero-assurances">
+            <span><i>✓</i> No account required</span>
+            <span><i>✓</i> CSV, XLS and XLSX</span>
+            <span><i>✓</i> Private workspace</span>
+          </div>
+        </div>
+
+        <div class="hero-product" id="product">
+          <div class="hero-window">
+            <div class="window-bar">
+              <span class="window-dots"><i></i><i></i><i></i></span>
+              <span class="window-address">dataviz-dash / workspace</span>
+              <span class="window-secure">● Live</span>
+            </div>
+            <img src="{{ url_for('static', filename='images/data-workspace.png') }}" alt="DataViz Dash data cleaning workspace" width="1920" height="908">
+          </div>
+          <div class="float-card float-upload">
+            <span class="float-icon">↑</span>
+            <span><strong>Dataset ready</strong><small>50,000 rows processed</small></span>
+            <i>✓</i>
+          </div>
+          <div class="float-card float-chart">
+            <svg viewBox="0 0 72 38" role="img" aria-label="Upward data trend">
+              <path d="M2 33 C14 31, 16 22, 27 24 S40 13, 49 17 S59 8, 70 4"></path>
+              <path class="area" d="M2 33 C14 31, 16 22, 27 24 S40 13, 49 17 S59 8, 70 4 V38 H2 Z"></path>
+            </svg>
+            <span><strong>6 chart types</strong><small>Ready to customise</small></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-strip" aria-label="Product capacity">
+      <div class="landing-container proof-grid">
+        <div><strong>50 MB</strong><span>maximum file size</span></div>
+        <div><strong>50,000</strong><span>rows on Pro</span></div>
+        <div><strong>6</strong><span>interactive chart types</span></div>
+        <div><strong>3</strong><span>spreadsheet formats</span></div>
+      </div>
+    </section>
+
+    <section class="landing-section workflow-section" id="workflow">
+      <div class="landing-container">
+        <div class="section-intro centered-intro">
+          <span class="section-kicker">A simpler workflow</span>
+          <h2>From messy file to useful dashboard</h2>
+          <p>Keep the entire analysis flow in one place, without switching between cleaning tools and chart builders.</p>
+        </div>
+        <div class="workflow-grid">
+          <article class="workflow-card">
+            <span class="workflow-number">01</span>
+            <div class="feature-icon upload-feature" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path></svg>
+            </div>
+            <h3>Upload your data</h3>
+            <p>Bring in CSV, XLS or XLSX files and preview the detected rows and columns immediately.</p>
+          </article>
+          <article class="workflow-card featured-workflow">
+            <span class="workflow-number">02</span>
+            <div class="feature-icon clean-feature" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7M17 4v6m-3-3h6M15 14v6m-3-3h6"></path></svg>
+            </div>
+            <h3>Clean without formulas</h3>
+            <p>Rename or remove columns, handle missing values, and remove duplicates or empty rows.</p>
+          </article>
+          <article class="workflow-card">
+            <span class="workflow-number">03</span>
+            <div class="feature-icon chart-feature" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"></path></svg>
+            </div>
+            <h3>Build and export</h3>
+            <p>Create responsive charts, save a dashboard, and export your work for reporting or presentations.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section feature-section" id="features">
+      <div class="landing-container">
+        <div class="section-intro split-intro">
+          <div><span class="section-kicker">Everything in one workspace</span><h2>Useful analytics, without enterprise-tool overload</h2></div>
+          <p>DataViz Dash focuses on the everyday spreadsheet workflow: preparing data, finding the story, and sharing a clean result.</p>
+        </div>
+        <div class="bento-grid">
+          <article class="bento-card bento-large bento-clean">
+            <div class="bento-copy">
+              <span class="mini-label">DATA PREPARATION</span>
+              <h3>Fix common spreadsheet problems in a few clicks</h3>
+              <p>Choose exactly how missing values, duplicate records, empty rows and unnecessary columns should be handled.</p>
+              <ul class="mini-checks"><li>Rename and remove columns</li><li>Fill or delete missing values</li><li>Remove duplicates and invalid rows</li></ul>
+            </div>
+            <div class="cleaning-demo" aria-hidden="true">
+              <div><span>Customer Name</span><i>Keep</i></div>
+              <div><span>Missing values</span><i class="purple">Fill</i></div>
+              <div class="removed"><span>Duplicate row</span><i>Removed</i></div>
+              <div class="clean-success"><b>✓</b><span><strong>Data cleaned</strong><small>248 rows ready</small></span></div>
+            </div>
+          </article>
+
+          <article class="bento-card bento-charts">
+            <span class="mini-label">VISUALISATION</span>
+            <h3>Six chart types, ready for your story</h3>
+            <div class="mini-chart" aria-hidden="true"><i style="height:42%"></i><i style="height:68%"></i><i style="height:52%"></i><i style="height:91%"></i><i style="height:76%"></i><i style="height:100%"></i></div>
+            <div class="chart-tags"><span>Bar</span><span>Line</span><span>Area</span><span>Pie</span><span>Scatter</span><span>Histogram</span></div>
+          </article>
+
+          <article class="bento-card bento-private">
+            <div class="privacy-orbit" aria-hidden="true"><span>⌁</span><i></i><b>✓</b></div>
+            <span class="mini-label">PRIVATE BY DEFAULT</span>
+            <h3>Your workspace is not publicly shared</h3>
+            <p>Work anonymously or create an email account when you want persistent access.</p>
+          </article>
+
+          <article class="bento-card bento-export">
+            <div class="bento-copy">
+              <span class="mini-label">FLEXIBLE OUTPUT</span>
+              <h3>Take the result with you</h3>
+              <p>Download cleaned CSV data, chart images, dashboard JSON, or create a print-ready PDF.</p>
+            </div>
+            <div class="export-stack" aria-hidden="true"><span>CSV</span><span>PNG</span><span>JSON</span><span>PDF</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section showcase-section">
+      <div class="landing-container showcase-grid">
+        <div class="showcase-copy">
+          <span class="section-kicker">Build visually</span>
+          <h2>Go from columns to charts without breaking your flow</h2>
+          <p>Choose the dataset, chart type, axes and aggregation. Your dashboard updates as you add each visual.</p>
+          <div class="showcase-points">
+            <div><span>1</span><p><strong>Pick the right visual</strong><small>Bar, line, area, pie, scatter or histogram.</small></p></div>
+            <div><span>2</span><p><strong>Control the calculation</strong><small>Use count, sum, average or unaggregated values.</small></p></div>
+            <div><span>3</span><p><strong>Save the complete layout</strong><small>Return to your dashboard whenever you need it.</small></p></div>
+          </div>
+          <a class="text-link" href="{{ url_for('main.index') }}">Build your first chart <span>→</span></a>
+        </div>
+        <div class="showcase-window">
+          <div class="window-bar"><span class="window-dots"><i></i><i></i><i></i></span><span class="window-address">Dashboard builder</span></div>
+          <img src="{{ url_for('static', filename='images/chart-builder.png') }}" alt="DataViz Dash interactive chart builder" width="1912" height="914" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section plans-section" id="plans">
+      <div class="landing-container">
+        <div class="section-intro centered-intro">
+          <span class="section-kicker">Start small, grow later</span>
+          <h2>A useful free workspace from day one</h2>
+          <p>Use the core workflow without an account. Pro capacity is available for testing while live checkout remains disabled.</p>
+        </div>
+        <div class="landing-plan-grid">
+          <article class="landing-plan-card">
+            <div class="plan-heading"><span>Free</span><strong>₹0</strong><small>for exploring and personal analysis</small></div>
+            <ul><li>10 MB files and 10,000 rows</li><li>3 saved datasets</li><li>2 saved dashboards</li><li>4 charts per dashboard</li><li>CSV data download</li></ul>
+            <a class="button hero-secondary full centered-button" href="{{ url_for('main.index') }}">Open free workspace</a>
+          </article>
+          <article class="landing-plan-card pro-preview-card">
+            <span class="preview-chip">PREVIEW</span>
+            <div class="plan-heading"><span>Pro</span><strong>More room</strong><small>for larger and repeat workflows</small></div>
+            <ul><li>50 MB files and 50,000 rows</li><li>25 saved datasets</li><li>25 saved dashboards</li><li>8 charts per dashboard</li><li>Dashboard export options</li></ul>
+            <a class="button primary full centered-button" href="{{ url_for('main.pricing') }}">Compare plan details</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta-section">
+      <div class="landing-container final-cta">
+        <div class="cta-grid" aria-hidden="true"></div>
+        <span class="section-kicker light-kicker">Your data is already telling a story</span>
+        <h2>Make it easier to see.</h2>
+        <p>Upload a spreadsheet and build your first dashboard in a private browser workspace.</p>
+        <a class="button cta-button" href="{{ url_for('main.index') }}">Open DataViz Dash <span>→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="landing-container footer-grid">
+      <a class="brand footer-brand" href="{{ url_for('main.landing') }}">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>DataViz <strong>Dash</strong></span>
+      </a>
+      <p>Simple spreadsheet analytics for focused teams and independent builders.</p>
+      <div><a href="{{ url_for('main.index') }}">Workspace</a><a href="{{ url_for('main.pricing') }}">Plans</a><a href="https://github.com/Naman794/DataViz-Dash">GitHub</a></div>
+    </div>
+  </footer>
+</body>
+</html>
