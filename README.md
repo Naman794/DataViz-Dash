@@ -1,124 +1,105 @@
 # DataViz Dash
 
-DataViz Dash is a local-first Flask application for turning CSV and Excel files into clean, interactive dashboards. The MVP does not require accounts and never creates public share links.
+DataViz Dash is a spreadsheet analysis workspace for transforming CSV and Excel
+files into clean datasets and interactive dashboards. It brings data upload,
+previewing, cleaning, chart creation, dashboard persistence, and export tools
+into one focused interface.
 
-## MVP features
+The project supports anonymous browser workspaces as well as email/password
+accounts for persistent access. It uses MongoDB for dataset and dashboard
+storage, Pandas for tabular processing, and Plotly for interactive charts.
 
-- Upload and preview `.csv`, `.xls`, and `.xlsx` files.
-- Rename or remove columns.
-- Fill missing values or delete rows with missing values.
-- Remove duplicate and completely empty rows.
-- Download the cleaned dataset as CSV.
-- Build bar, line, area, pie, scatter, and histogram charts.
-- Save up to eight charts in a MongoDB-backed dashboard.
-- Export chart PNGs, print/save a dashboard as PDF, or download dashboard JSON.
-- Create an email/password account to keep a persistent workspace.
-- Enforce Free and manually assigned Pro plan limits on the server.
+## Product preview
 
-Anonymous ownership is stored in a signed browser cookie. Saved data is only visible to the browser workspace that created it. Clearing that cookie creates a new workspace.
+### Data workspace
 
-## Quick start with Docker
+Upload CSV, XLS, or XLSX data, inspect its structure, apply cleaning rules, and
+download the prepared dataset.
 
-Docker is the simplest option because it starts both MongoDB and the web application.
+![Data workspace showing spreadsheet upload, dataset statistics and cleaning tools](docs/images/data-workspace.png)
 
-```bash
-docker compose up --build
-```
+### Interactive chart builder
 
-Open [http://localhost:5000](http://localhost:5000). Stop the application with `Ctrl+C`.
+Create responsive bar, line, area, pie, scatter, and histogram visualisations.
+Dashboards can combine multiple charts from the selected dataset.
 
-## Run with local Python
+![Chart builder showing dashboard controls and two interactive charts](docs/images/chart-builder.png)
 
-Requirements: Python 3.10+ and a running MongoDB instance.
+### Saved dashboards
 
-```bash
-python -m venv .venv
-```
+Keep dashboards attached to the current browser workspace or registered account,
+then reopen, update, export, or delete them when needed.
 
-Activate the environment:
+![Saved dashboards workspace](docs/images/saved-dashboards.png)
 
-```bash
-# macOS/Linux
-source .venv/bin/activate
+## Core capabilities
 
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-```
+- CSV, XLS, and XLSX upload and preview
+- Column renaming and removal
+- Missing-value replacement or incomplete-row deletion
+- Duplicate and completely empty row removal
+- Cleaned CSV download
+- Bar, line, area, pie, scatter, and histogram charts
+- Multi-chart dashboard creation and persistence
+- Chart PNG, dashboard JSON, and print-ready PDF exports
+- Anonymous browser-isolated workspaces
+- Email/password accounts with persistent workspace ownership
+- Server-enforced Free and Pro feature entitlements
+- Responsive interface for desktop and smaller screens
 
-Install and run:
+## Product flow
 
-```bash
-python -m pip install -r requirements.txt
-cp .env.example .env
-python app.py
-```
+1. Upload a spreadsheet and review its detected rows and columns.
+2. Apply cleaning rules to prepare the dataset for analysis.
+3. Select fields and aggregations to create interactive charts.
+4. Save the resulting dashboard for future access or export.
 
-On Windows, copy `.env.example` to `.env` manually. The defaults connect to MongoDB at `mongodb://localhost:27017`.
+## Plans and capacity
 
-## Configuration
+| Capability | Free | Pro preview |
+| --- | ---: | ---: |
+| Maximum upload | 10 MB | 50 MB |
+| Rows per dataset | 10,000 | 50,000 |
+| Saved datasets | 3 | 25 |
+| Saved dashboards | 2 | 25 |
+| Charts per dashboard | 4 | 8 |
+| Chart data processed | 10,000 rows | 50,000 rows |
+| Basic data cleaning | Included | Included |
+| Cleaned CSV and chart PNG | Included | Included |
+| Dashboard JSON and print / PDF | Upgrade required | Included |
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `SECRET_KEY` | Local development value | Signs the anonymous workspace cookie. Change it outside local development. |
-| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection string. |
-| `MONGO_DB_NAME` | `dataviz_dash` | Database name. |
-| `MAX_UPLOAD_MB` | `50` | Maximum uploaded file size. |
-| `MAX_DATASET_ROWS` | `50000` | Maximum rows accepted per dataset. |
-| `CHART_ROW_LIMIT` | `50000` | Maximum rows returned to the chart builder. |
-| `FREE_UPLOAD_MB` | `10` | Free-plan upload size. |
-| `FREE_DATASET_ROWS` | `10000` | Free-plan rows per dataset. |
-| `FREE_DATASET_LIMIT` | `3` | Free-plan saved datasets. |
-| `FREE_DASHBOARD_LIMIT` | `2` | Free-plan saved dashboards. |
-| `FREE_CHART_LIMIT` | `4` | Free-plan charts per dashboard. |
-| `SESSION_COOKIE_SECURE` | `false` | Set to `true` when the app is served over HTTPS. |
+Pro access is currently a product preview. Live payment checkout has not been
+enabled yet.
 
-## Previewing Pro without payments
+## Technology
 
-Payment checkout is intentionally disabled in this version. After creating an
-account, assign Pro access from the project directory:
+| Layer | Technology |
+| --- | --- |
+| Application | Python and Flask |
+| Data processing | Pandas, OpenPyXL, and xlrd |
+| Database | MongoDB and PyMongo |
+| Visualisation | Plotly.js |
+| Interface | HTML, CSS, and JavaScript |
+| Quality | Pytest, Ruff, and GitHub Actions |
+| Packaging | Docker and GitHub Container Registry workflow-ready |
 
-```bash
-python -m scripts.set_plan your-email@example.com pro
-```
+## Privacy and access
 
-Sign out and back in after changing the plan. Use `free` instead of `pro` to
-return the account to the Free plan.
+- Uploaded datasets are never given public share links.
+- Anonymous data is isolated through a signed browser workspace identifier.
+- Registered users can claim an anonymous workspace and access it after signing in.
+- Passwords are stored as secure hashes rather than plaintext.
+- Plan limits are checked by the server instead of relying only on hidden controls.
 
-The preview account system does not yet include email verification, password
-reset email, or login rate limiting. Add those controls before a public paid
-launch, and set `SESSION_COOKIE_SECURE=true` when the app is behind HTTPS.
+## Project status
 
-## Tests
+DataViz Dash is under active development. Version `V 0.1` established the
+working data-cleaning and dashboard MVP. The current development branch adds
+larger dataset capacity, accounts, Free/Pro entitlements, and a staged paywall.
 
-Tests use an in-memory MongoDB replacement and do not touch a real database.
+See the [V 0.1 release](https://github.com/Naman794/DataViz-Dash/releases/tag/v0.1)
+and the [freemium product plan](docs/FREEMIUM_PLAN.md).
 
-```bash
-python -m pip install -r requirements-dev.txt
-python -m ruff check app.py dataviz tests
-python -m pytest -q
-```
+## License
 
-## Project structure
-
-```text
-dataviz/
-  __init__.py       Flask application factory
-  config.py         Environment configuration
-  database.py       MongoDB connection and indexes
-  routes.py         Web and JSON API routes
-  storage.py        Dataset and dashboard persistence
-  tabular.py        Spreadsheet parsing and cleaning
-static/             Browser JavaScript and styles
-templates/          Application shell
-tests/              Unit and API tests
-app.py              Local and WSGI entry point
-```
-
-## Security note
-
-An old MongoDB credential was committed in earlier repository history. Removing it from the current source does not invalidate it. Delete or rotate that Atlas database user before using this repository again, and keep all future credentials in environment variables.
-
-## Product roadmap
-
-The proposed Free and Pro limits, paywall enforcement model, and billing phases
-are documented in [`docs/FREEMIUM_PLAN.md`](docs/FREEMIUM_PLAN.md).
+Licensed under the [Apache License 2.0](LICENSE).
