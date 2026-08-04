@@ -134,7 +134,10 @@ def upload_dataset():
         return error(str(exc))
 
     filename = secure_filename(upload.filename or "dataset") or "dataset"
-    dataset = repository.create_dataset(owner_id(), filename, frame)
+    try:
+        dataset = repository.create_dataset(owner_id(), filename, frame)
+    except DataValidationError as exc:
+        return error(str(exc))
     stored_dataset = repository.get_dataset(owner_id(), dataset["id"])
     return jsonify(
         dataset=dataset,
@@ -168,10 +171,10 @@ def clean_dataset(dataset_id):
     operations = request.get_json(silent=True) or {}
     try:
         frame, summary = clean_frame(repository.get_frame(dataset), operations)
+        updated = repository.replace_dataset(dataset, frame)
     except DataValidationError as exc:
         return error(str(exc))
 
-    updated = repository.replace_dataset(dataset, frame)
     return jsonify(
         dataset=updated,
         rows=repository.get_rows(dataset, 100),

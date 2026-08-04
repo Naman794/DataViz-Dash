@@ -11,6 +11,11 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "local-development-key-change-me")
     MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "dataviz_dash")
+    MONGO_SERVER_SELECTION_TIMEOUT_MS = int(
+        os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000")
+    )
+    MONGO_CONNECT_TIMEOUT_MS = int(os.getenv("MONGO_CONNECT_TIMEOUT_MS", "5000"))
+    MONGO_SOCKET_TIMEOUT_MS = int(os.getenv("MONGO_SOCKET_TIMEOUT_MS", "20000"))
     MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
     MAX_CONTENT_LENGTH = (MAX_UPLOAD_MB + 1) * 1024 * 1024
     MAX_DATASET_ROWS = int(os.getenv("MAX_DATASET_ROWS", "50000"))
