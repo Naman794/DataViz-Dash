@@ -66,10 +66,15 @@ def count_label(count, singular, plural=None):
 
 
 @bp.get("/")
+def landing():
+    return render_template("landing.html", plan=active_plan())
+
+
+@bp.get("/app")
 def index():
     plan = active_plan()
     return render_template(
-        "index.html",
+        "workspace.html",
         plan=plan,
         max_upload_mb=plan["max_upload_mb"],
         max_dataset_rows=plan["max_dataset_rows"],
