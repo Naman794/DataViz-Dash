@@ -1,5 +1,6 @@
-"""MongoDB persistence for datasets and dashboards."""
+"""MongoDB persistence for workspaces, accounts, and administration."""
 
+import re
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -151,6 +152,10 @@ class Store:
             "email": email,
             "password_hash": password_hash,
             "plan": "free",
+            "status": "active",
+            "login_count": 0,
+            "last_login_at": None,
+            "last_activity_at": now,
             "created_at": now,
             "updated_at": now,
         }
@@ -166,6 +171,138 @@ class Store:
 
     def get_user_by_email(self, email: str):
         return self.db.users.find_one({"email": email})
+
+    def record_login(self, user_id: str, event_type: str = "account.login"):
+        object_id = self._object_id(user_id)
+        if object_id is None:
+            return False
+        now = utc_now()
+        result = self.db.users.update_one(
+            {"_id": object_id},
+            {
+                "$set": {
+                    "last_login_at": now,
+                    "last_activity_at": now,
+                    "updated_at": now,
+                },
+                "$inc": {"login_count": 1},
+            },
+        )
+        if not result.matched_count:
+            return False
+        self.db.activity_events.insert_one(
+            {"user_id": user_id, "event_type": event_type, "details": {}, "created_at": now}
+        )
+        return True
+
+    def record_activity(self, user_id: str, event_type: str, details: dict | None = None):
+        object_id = self._object_id(user_id)
+        if object_id is None:
+            return False
+        now = utc_now()
+        result = self.db.users.update_one(
+            {"_id": object_id},
+            {"$set": {"last_activity_at": now, "updated_at": now}},
+        )
+        if not result.matched_count:
+            return False
+        self.db.activity_events.insert_one(
+            {
+                "user_id": user_id,
+                "event_type": event_type,
+                "details": details or {},
+                "created_at": now,
+            }
+        )
+        return True
+
+    def admin_summary(self):
+        return {
+            "users": self.db.users.count_documents({}),
+            "pro_users": self.db.users.count_documents({"plan": "pro"}),
+            "active_users": self.db.users.count_documents(
+                {"status": {"$ne": "suspended"}}
+            ),
+            "suspended_users": self.db.users.count_documents(
+                {"status": "suspended"}
+            ),
+            "datasets": self.db.datasets.count_documents({}),
+            "dashboards": self.db.dashboards.count_documents({}),
+            "rows": sum(
+                document.get("row_count", 0)
+                for document in self.db.datasets.find({}, {"row_count": 1})
+            ),
+        }
+
+    def list_users(
+        self,
+        search: str = "",
+        plan: str = "",
+        status: str = "",
+        limit: int = 50,
+        skip: int = 0,
+    ):
+        query = self._user_query(search, plan, status)
+        users = list(
+            self.db.users.find(query)
+            .sort("created_at", -1)
+            .skip(max(0, skip))
+            .limit(limit)
+        )
+        return [self._admin_user(document) for document in users]
+
+    def count_users(self, search: str = "", plan: str = "", status: str = ""):
+        return self.db.users.count_documents(self._user_query(search, plan, status))
+
+    def update_user_plan(self, user_id: str, plan: str):
+        object_id = self._object_id(user_id)
+        if object_id is None or plan not in {"free", "pro"}:
+            return None
+        now = utc_now()
+        return self.db.users.find_one_and_update(
+            {"_id": object_id},
+            {"$set": {"plan": plan, "updated_at": now}},
+            return_document=True,
+        )
+
+    def update_user_status(self, user_id: str, status: str):
+        object_id = self._object_id(user_id)
+        if object_id is None or status not in {"active", "suspended"}:
+            return None
+        now = utc_now()
+        return self.db.users.find_one_and_update(
+            {"_id": object_id},
+            {"$set": {"status": status, "updated_at": now}},
+            return_document=True,
+        )
+
+    def record_admin_action(
+        self,
+        admin_user,
+        target_user,
+        action: str,
+        previous_value: str,
+        new_value: str,
+    ):
+        self.db.admin_audit.insert_one(
+            {
+                "admin_user_id": str(admin_user["_id"]),
+                "admin_email": admin_user["email"],
+                "target_user_id": str(target_user["_id"]),
+                "target_email": target_user["email"],
+                "action": action,
+                "previous_value": previous_value,
+                "new_value": new_value,
+                "created_at": utc_now(),
+            }
+        )
+
+    def recent_activity(self, limit: int = 30):
+        events = list(self.db.activity_events.find().sort("created_at", -1).limit(limit))
+        return self._with_activity_emails(events)
+
+    def recent_admin_actions(self, limit: int = 20):
+        return list(self.db.admin_audit.find().sort("created_at", -1).limit(limit))
 
     def claim_workspace(self, previous_owner_id: str, user_id: str):
         if not previous_owner_id or previous_owner_id == user_id:
@@ -190,6 +327,56 @@ class Store:
             return False
         result = self.db.dashboards.delete_one({"_id": object_id, "owner_id": owner_id})
         return result.deleted_count == 1
+
+    def _admin_user(self, document):
+        user_id = str(document["_id"])
+        datasets = list(
+            self.db.datasets.find({"owner_id": user_id}, {"row_count": 1})
+        )
+        return {
+            "id": user_id,
+            "email": document["email"],
+            "plan": "pro" if document.get("plan") == "pro" else "free",
+            "status": (
+                "suspended" if document.get("status") == "suspended" else "active"
+            ),
+            "login_count": document.get("login_count", 0),
+            "last_login_at": document.get("last_login_at"),
+            "last_activity_at": document.get("last_activity_at"),
+            "created_at": document.get("created_at"),
+            "dataset_count": len(datasets),
+            "dashboard_count": self.db.dashboards.count_documents(
+                {"owner_id": user_id}
+            ),
+            "row_count": sum(dataset.get("row_count", 0) for dataset in datasets),
+        }
+
+    @staticmethod
+    def _user_query(search: str, plan: str, status: str):
+        query = {}
+        if search:
+            query["email"] = {"$regex": re.escape(search), "$options": "i"}
+        if plan in {"free", "pro"}:
+            query["plan"] = plan
+        if status == "suspended":
+            query["status"] = "suspended"
+        elif status == "active":
+            query["status"] = {"$ne": "suspended"}
+        return query
+
+    def _with_activity_emails(self, events):
+        user_ids = {event.get("user_id") for event in events if event.get("user_id")}
+        object_ids = [self._object_id(user_id) for user_id in user_ids]
+        emails = {
+            str(user["_id"]): user["email"]
+            for user in self.db.users.find(
+                {"_id": {"$in": [value for value in object_ids if value]}},
+                {"email": 1},
+            )
+        }
+        for event in events:
+            event["email"] = emails.get(event.get("user_id"), "Unknown account")
+        return events
 
     def _insert_rows(self, dataset_id: ObjectId, frame: pd.DataFrame):
         pending_documents = []

@@ -3,6 +3,7 @@
 from flask import Flask, jsonify
 from pymongo.errors import PyMongoError
 
+from .admin import bp as admin_bp
 from .auth import bp as auth_bp
 from .config import Config
 from .database import init_database
@@ -22,6 +23,7 @@ def create_app(config_overrides=None):
     init_database(app)
     app.register_blueprint(bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
 
     @app.errorhandler(413)
     def file_too_large(_error):

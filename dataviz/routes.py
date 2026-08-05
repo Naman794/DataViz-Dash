@@ -45,6 +45,12 @@ def active_plan():
     return resolve_plan(current_user())
 
 
+def record_account_activity(event_type: str, details: dict | None = None):
+    user = current_user()
+    if user is not None:
+        store().record_activity(str(user["_id"]), event_type, details)
+
+
 def error(message, status=400):
     return jsonify(error=message), status
 
@@ -144,6 +150,14 @@ def upload_dataset():
     except DataValidationError as exc:
         return error(str(exc))
     stored_dataset = repository.get_dataset(owner_id(), dataset["id"])
+    record_account_activity(
+        "dataset.uploaded",
+        {
+            "dataset_id": dataset["id"],
+            "filename": dataset["name"],
+            "row_count": dataset["row_count"],
+        },
+    )
     return jsonify(
         dataset=dataset,
         rows=repository.get_rows(stored_dataset, limit=100),
@@ -180,6 +194,11 @@ def clean_dataset(dataset_id):
     except DataValidationError as exc:
         return error(str(exc))
 
+    record_account_activity(
+        "dataset.cleaned",
+        {"dataset_id": dataset_id, "row_count": updated["row_count"]},
+    )
+
     return jsonify(
         dataset=updated,
         rows=repository.get_rows(dataset, 100),
@@ -194,6 +213,10 @@ def download_dataset(dataset_id):
     if dataset is None:
         return error("Dataset not found.", 404)
     frame = repository.get_frame(dataset)
+    record_account_activity(
+        "dataset.exported",
+        {"dataset_id": dataset_id, "filename": dataset["name"]},
+    )
     output = BytesIO(frame.to_csv(index=False).encode("utf-8"))
     base_name = dataset["name"].rsplit(".", 1)[0]
     return send_file(
@@ -208,6 +231,7 @@ def download_dataset(dataset_id):
 def delete_dataset(dataset_id):
     if not store().delete_dataset(owner_id(), dataset_id):
         return error("Dataset not found.", 404)
+    record_account_activity("dataset.deleted", {"dataset_id": dataset_id})
     return Response(status=204)
 
 
@@ -237,6 +261,10 @@ def create_dashboard():
     if validation_error:
         return error(validation_error)
     dashboard = store().create_dashboard(owner_id(), payload)
+    record_account_activity(
+        "dashboard.created",
+        {"dashboard_id": dashboard["id"], "title": dashboard["title"]},
+    )
     return jsonify(dashboard=dashboard), 201
 
 
@@ -265,6 +293,10 @@ def update_dashboard(dashboard_id):
     dashboard = store().update_dashboard(owner_id(), dashboard_id, payload)
     if dashboard is None:
         return error("Dashboard not found.", 404)
+    record_account_activity(
+        "dashboard.updated",
+        {"dashboard_id": dashboard["id"], "title": dashboard["title"]},
+    )
     return jsonify(dashboard=dashboard)
 
 
@@ -272,6 +304,7 @@ def update_dashboard(dashboard_id):
 def delete_dashboard(dashboard_id):
     if not store().delete_dashboard(owner_id(), dashboard_id):
         return error("Dashboard not found.", 404)
+    record_account_activity("dashboard.deleted", {"dashboard_id": dashboard_id})
     return Response(status=204)
 
 
@@ -285,6 +318,10 @@ def export_dashboard(dashboard_id):
     dashboard = store().get_dashboard(owner_id(), dashboard_id)
     if dashboard is None:
         return error("Dashboard not found.", 404)
+    record_account_activity(
+        "dashboard.exported",
+        {"dashboard_id": dashboard["id"], "title": dashboard["title"]},
+    )
     output = BytesIO(json.dumps(dashboard, indent=2).encode("utf-8"))
     filename = secure_filename(dashboard["title"]) or "dashboard"
     return send_file(

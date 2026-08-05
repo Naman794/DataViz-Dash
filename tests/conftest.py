@@ -18,6 +18,7 @@ def app():
             "FREE_DATASET_LIMIT": 1,
             "FREE_DASHBOARD_LIMIT": 1,
             "FREE_CHART_LIMIT": 2,
+            "ADMIN_EMAILS": ("admin@example.com",),
         }
     )
     yield application

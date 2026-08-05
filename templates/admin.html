@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DataViz Dash account administration.">
+  <title>Admin · DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <header class="admin-header">
+      <a class="brand" href="{{ url_for('main.landing') }}">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>DataViz <strong>Dash</strong></span>
+      </a>
+      <div class="admin-header-actions">
+        <span class="admin-role"><span></span>Administrator</span>
+        <a class="button tertiary compact" href="{{ url_for('main.index') }}">Open workspace</a>
+        <a class="button tertiary compact" href="{{ url_for('auth.account') }}">{{ account_user.email }}</a>
+      </div>
+    </header>
+
+    <main>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack admin-flashes">
+            {% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <section class="admin-hero">
+        <div>
+          <p class="eyebrow">CONTROL CENTER</p>
+          <h1>Account administration</h1>
+          <p>Review usage, manage memberships, control access, and trace every administrative change.</p>
+        </div>
+        <div class="admin-security-note">
+          <strong>Protected access</strong>
+          <span>Only emails in the server’s ADMIN_EMAILS allowlist can open this page.</span>
+        </div>
+      </section>
+
+      <section class="admin-stats" aria-label="Account overview">
+        <article><span>Total accounts</span><strong>{{ "{:,}".format(summary.users) }}</strong><small>{{ summary.active_users }} active</small></article>
+        <article><span>Pro members</span><strong>{{ "{:,}".format(summary.pro_users) }}</strong><small>{{ summary.users - summary.pro_users }} free</small></article>
+        <article><span>Suspended</span><strong>{{ "{:,}".format(summary.suspended_users) }}</strong><small>Access blocked</small></article>
+        <article><span>Datasets</span><strong>{{ "{:,}".format(summary.datasets) }}</strong><small>{{ "{:,}".format(summary.rows) }} rows</small></article>
+        <article><span>Dashboards</span><strong>{{ "{:,}".format(summary.dashboards) }}</strong><small>Across all accounts</small></article>
+      </section>
+
+      <section class="admin-panel account-management">
+        <div class="admin-panel-heading">
+          <div><h2>Account management</h2><p>{{ pagination.total }} matching account{{ '' if pagination.total == 1 else 's' }}.</p></div>
+          <form class="admin-filters" method="get" action="{{ url_for('admin.dashboard') }}">
+            <label><span class="sr-only">Search email</span><input name="q" value="{{ filters.q }}" placeholder="Search email"></label>
+            <label><span class="sr-only">Filter by membership</span><select name="plan">
+              <option value="">All plans</option>
+              <option value="free" {{ 'selected' if filters.plan == 'free' }}>Free</option>
+              <option value="pro" {{ 'selected' if filters.plan == 'pro' }}>Pro</option>
+            </select></label>
+            <label><span class="sr-only">Filter by status</span><select name="status">
+              <option value="">All statuses</option>
+              <option value="active" {{ 'selected' if filters.status == 'active' }}>Active</option>
+              <option value="suspended" {{ 'selected' if filters.status == 'suspended' }}>Suspended</option>
+            </select></label>
+            <button class="button secondary compact" type="submit">Filter</button>
+            {% if filters.q or filters.plan or filters.status %}<a class="clear-filter" href="{{ url_for('admin.dashboard') }}">Clear</a>{% endif %}
+          </form>
+        </div>
+
+        <div class="admin-table-scroll">
+          <table class="admin-table">
+            <thead><tr><th>Account</th><th>Usage</th><th>Last seen</th><th>Membership</th><th>Access</th></tr></thead>
+            <tbody>
+              {% for user in users %}
+                <tr>
+                  <td>
+                    <strong class="account-email">{{ user.email }}</strong>
+                    <span class="account-meta">Joined {{ user.created_at.strftime('%d %b %Y') if user.created_at else 'before tracking' }} · {{ user.login_count }} sign-ins</span>
+                    {% if user.is_admin %}<span class="mini-badge admin">Admin</span>{% endif %}
+                  </td>
+                  <td><strong>{{ user.dataset_count }} datasets · {{ user.dashboard_count }} dashboards</strong><span class="account-meta">{{ "{:,}".format(user.row_count) }} stored rows</span></td>
+                  <td><strong>{{ user.last_activity_at.strftime('%d %b, %H:%M') if user.last_activity_at else 'No activity yet' }}</strong><span class="account-meta">Last login {{ user.last_login_at.strftime('%d %b, %H:%M') if user.last_login_at else 'not recorded' }}</span></td>
+                  <td>
+                    <form class="inline-control" method="post" action="{{ url_for('admin.update_plan', user_id=user.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="return_query" value="{{ return_query }}">
+                      <select name="plan" aria-label="Membership for {{ user.email }}">
+                        <option value="free" {{ 'selected' if user.plan == 'free' }}>Free</option>
+                        <option value="pro" {{ 'selected' if user.plan == 'pro' }}>Pro</option>
+                      </select>
+                      <button class="button tertiary compact" type="submit">Update</button>
+                    </form>
+                  </td>
+                  <td>
+                    {% if user.is_admin %}
+                      <span class="status-pill active">Protected</span>
+                    {% else %}
+                      <form method="post" action="{{ url_for('admin.update_status', user_id=user.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="return_query" value="{{ return_query }}">
+                        <input type="hidden" name="status" value="{{ 'active' if user.status == 'suspended' else 'suspended' }}">
+                        <button class="status-button {{ user.status }}" type="submit"{% if user.status == 'active' %} data-confirm="Suspend {{ user.email }}? They will immediately lose access to their account workspace."{% endif %}>{{ 'Reactivate' if user.status == 'suspended' else 'Suspend' }}</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td class="admin-empty" colspan="5">No accounts match these filters.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if pagination.page_count > 1 %}
+          <nav class="admin-pagination" aria-label="Account pages">
+            {% if pagination.page > 1 %}<a class="button tertiary compact" href="{{ url_for('admin.dashboard', q=filters.q, plan=filters.plan, status=filters.status, page=pagination.page - 1) }}">Previous</a>{% endif %}
+            <span>Page {{ pagination.page }} of {{ pagination.page_count }}</span>
+            {% if pagination.page < pagination.page_count %}<a class="button tertiary compact" href="{{ url_for('admin.dashboard', q=filters.q, plan=filters.plan, status=filters.status, page=pagination.page + 1) }}">Next</a>{% endif %}
+          </nav>
+        {% endif %}
+      </section>
+
+      <div class="admin-lower-grid">
+        <section class="admin-panel">
+          <div class="admin-panel-heading"><div><h2>Recent account activity</h2><p>Important actions only; spreadsheet contents are never logged.</p></div></div>
+          <div class="timeline">
+            {% for event in recent_activity %}
+              <article class="timeline-item">
+                <span class="event-icon">{{ '↗' if 'exported' in event.event_type else ('+' if 'created' in event.event_type or 'uploaded' in event.event_type else '•') }}</span>
+                <div><strong>{{ event.event_type|replace('.', ' ')|title }}</strong><span>{{ event.email }}</span></div>
+                <time>{{ event.created_at.strftime('%d %b, %H:%M') }}</time>
+              </article>
+            {% else %}<p class="admin-empty">Activity will appear after registered users take actions.</p>{% endfor %}
+          </div>
+        </section>
+
+        <section class="admin-panel">
+          <div class="admin-panel-heading"><div><h2>Admin audit trail</h2><p>Every membership and access change is retained.</p></div></div>
+          <div class="timeline">
+            {% for action in recent_actions %}
+              <article class="timeline-item audit-item">
+                <span class="event-icon">✓</span>
+                <div><strong>{{ action.target_email }}</strong><span>{{ action.previous_value|title }} → {{ action.new_value|title }} by {{ action.admin_email }}</span></div>
+                <time>{{ action.created_at.strftime('%d %b, %H:%M') }}</time>
+              </article>
+            {% else %}<p class="admin-empty">Administrative changes will appear here.</p>{% endfor %}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

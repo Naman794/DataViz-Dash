@@ -39,6 +39,7 @@
         </div>
         <div class="account-actions">
           <a class="button primary" href="{{ url_for('main.index') }}">Open workspace</a>
+          {% if account_is_admin %}<a class="button secondary" href="{{ url_for('admin.dashboard') }}">Admin dashboard</a>{% endif %}
           <a class="button tertiary" href="{{ url_for('main.pricing') }}">Compare plans</a>
           <form method="post" action="{{ url_for('auth.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -45,6 +45,7 @@ then reopen, update, export, or delete them when needed.
 - Anonymous browser-isolated workspaces
 - Email/password accounts with persistent workspace ownership
 - Server-enforced Free and Pro feature entitlements
+- Protected administrator console for account activity, membership, and access control
 - Responsive interface for desktop and smaller screens
 
 ## Product flow
@@ -90,6 +91,7 @@ enabled yet.
 - Registered users can claim an anonymous workspace and access it after signing in.
 - Passwords are stored as secure hashes rather than plaintext.
 - Plan limits are checked by the server instead of relying only on hidden controls.
+- Administrative membership and suspension changes are written to an audit trail.
 
 ## Project status
 

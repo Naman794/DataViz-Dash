@@ -39,6 +39,11 @@
         <a class="nav-item" href="{{ url_for('main.pricing') }}">
           <span class="nav-icon">◇</span><span>Plans</span>
         </a>
+        {% if account_is_admin %}
+          <a class="nav-item" href="{{ url_for('admin.dashboard') }}">
+            <span class="nav-icon">⚙</span><span>Admin</span>
+          </a>
+        {% endif %}
       </nav>
 
       <div class="sidebar-note">
