@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Build interactive data dashboards in DataViz Dash.">
+  <title>Chart builder · DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/builder.css') }}">
+</head>
+<body
+  class="builder-body"
+  data-initial-dashboard-id="{{ initial_dashboard_id }}"
+  data-chart-row-limit="{{ chart_row_limit }}"
+  data-max-charts="{{ plan.max_charts }}"
+  data-dashboard-exports="{{ 'true' if plan.dashboard_exports else 'false' }}"
+>
+  <header class="builder-header">
+    <a class="brand" href="{{ url_for('main.landing') }}" aria-label="DataViz Dash home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>DataViz <strong>Dash</strong></span>
+    </a>
+    <nav class="builder-header-nav" aria-label="Builder navigation">
+      <a href="{{ url_for('main.index') }}">Data workspace</a>
+      <a class="active" href="{{ url_for('main.builder') }}">Builder</a>
+      {% if account_is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin</a>{% endif %}
+    </nav>
+    <div class="builder-header-actions">
+      <span class="db-status" id="builder-db-status"><span></span> Checking database</span>
+      <span class="plan-badge {{ plan.name }}">{{ plan.label }}</span>
+      <a class="builder-account" href="{{ url_for('auth.account') }}">{{ account_user.email if account_user else 'Sign in' }}</a>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <section class="builder-commandbar">
+      <div class="builder-title-block">
+        <span class="eyebrow">ANALYSIS CANVAS</span>
+        <input id="builder-dashboard-title" maxlength="100" value="Untitled dashboard" aria-label="Dashboard title">
+      </div>
+      <label class="builder-dataset-control">
+        <span>Dataset</span>
+        <select id="builder-page-dataset"><option value="">Choose a prepared dataset</option></select>
+      </label>
+      <div class="builder-command-actions">
+        <span id="builder-save-state">Not saved</span>
+        <button class="button tertiary compact" id="builder-new-button" type="button">New</button>
+        <button class="button tertiary compact" id="builder-print-button" type="button" disabled>Print / PDF</button>
+        <button class="button primary compact" id="builder-save-button" type="button" disabled>Save dashboard</button>
+      </div>
+    </section>
+
+    <div class="builder-workbench">
+      <aside class="builder-rail fields-rail">
+        <section>
+          <div class="rail-heading"><div><span class="rail-kicker">DATA</span><h2>Fields</h2></div><span id="builder-field-count">0</span></div>
+          <input class="rail-search" id="builder-field-search" type="search" placeholder="Search columns" aria-label="Search dataset columns">
+          <div class="field-list" id="builder-field-list"><p class="rail-empty">Choose a dataset to inspect its fields.</p></div>
+        </section>
+
+        <section class="field-profile" id="builder-field-profile">
+          <div class="rail-heading"><div><span class="rail-kicker">PROFILE</span><h2>Field summary</h2></div></div>
+          <p class="rail-empty">Select a field to see its quality and statistics.</p>
+        </section>
+
+        <section id="saved-dashboards">
+          <div class="rail-heading"><div><span class="rail-kicker">RECENT</span><h2>Saved dashboards</h2></div><span id="builder-saved-count">0</span></div>
+          <div class="builder-saved-list" id="builder-saved-list"><p class="rail-empty">No saved dashboards yet.</p></div>
+        </section>
+      </aside>
+
+      <section class="analysis-canvas">
+        <div class="canvas-heading">
+          <div><h1>Dashboard canvas</h1><p id="builder-canvas-description">Select a dataset, then add your first visual.</p></div>
+          <span id="builder-visual-count">0 visuals</span>
+        </div>
+        <div class="analysis-grid" id="builder-analysis-grid">
+          <div class="analysis-empty">
+            <span>⌁</span>
+            <h2>Build an analysis, not just a chart</h2>
+            <p>Add charts, KPI summaries, and data tables to this spacious canvas.</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="builder-rail properties-rail">
+        <div class="rail-heading"><div><span class="rail-kicker">VISUAL</span><h2 id="builder-properties-title">Add a visual</h2></div></div>
+        <div class="visual-type-grid" id="builder-visual-types" role="group" aria-label="Visual type">
+          <button class="active" type="button" data-visual-type="bar">▥<span>Bar</span></button>
+          <button type="button" data-visual-type="line">⌁<span>Line</span></button>
+          <button type="button" data-visual-type="area">◒<span>Area</span></button>
+          <button type="button" data-visual-type="pie">◔<span>Pie</span></button>
+          <button type="button" data-visual-type="scatter">⠿<span>Scatter</span></button>
+          <button type="button" data-visual-type="histogram">▥<span>Histogram</span></button>
+          <button type="button" data-visual-type="kpi">123<span>KPI</span></button>
+          <button type="button" data-visual-type="table">▦<span>Table</span></button>
+        </div>
+
+        <div class="property-form">
+          <label class="field"><span>Visual title</span><input id="builder-visual-title" maxlength="100" placeholder="Revenue by region"></label>
+          <label class="field"><span id="builder-x-label">Category / X-axis</span><select id="builder-x-column"><option value="">Select a field</option></select></label>
+          <label class="field" id="builder-y-field"><span>Value / Y-axis</span><select id="builder-y-column"><option value="">Count records</option></select></label>
+          <label class="field" id="builder-aggregation-field"><span>Aggregation</span><select id="builder-aggregation">
+            <option value="count">Count</option>
+            <option value="sum">Sum</option>
+            <option value="average">Average</option>
+            <option value="minimum">Minimum</option>
+            <option value="maximum">Maximum</option>
+            <option value="none">No aggregation</option>
+          </select></label>
+          <div class="property-row">
+            <label class="field" id="builder-sort-field"><span>Sort values</span><select id="builder-sort">
+              <option value="default">Dataset order</option>
+              <option value="descending">Highest first</option>
+              <option value="ascending">Lowest first</option>
+            </select></label>
+            <label class="field" id="builder-top-field"><span>Limit results</span><select id="builder-top-n">
+              <option value="0">Show all</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="20">Top 20</option>
+            </select></label>
+          </div>
+          <label class="field"><span>Canvas width</span><select id="builder-visual-size"><option value="half">Half width</option><option value="full">Full width</option></select></label>
+          <button class="button primary full" id="builder-add-visual" type="button">＋ Add visual</button>
+          <button class="button tertiary full hidden" id="builder-cancel-edit" type="button">Cancel editing</button>
+        </div>
+
+        <div class="builder-tip"><strong>Analysis tip</strong><p>KPI cards summarize a measure. Tables help verify the exact records behind a chart.</p></div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="toast" id="builder-toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="{{ url_for('static', filename='js/builder.js') }}" defer></script>
+</body>
+</html>

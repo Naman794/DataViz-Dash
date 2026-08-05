@@ -30,12 +30,12 @@
         <button class="nav-item active" data-view="data-view">
           <span class="nav-icon">⇧</span><span>Data workspace</span>
         </button>
-        <button class="nav-item" data-view="builder-view">
+        <a class="nav-item" href="{{ url_for('main.builder') }}">
           <span class="nav-icon">⌁</span><span>Chart builder</span>
-        </button>
-        <button class="nav-item" data-view="saved-view">
+        </a>
+        <a class="nav-item" href="{{ url_for('main.builder') }}#saved-dashboards">
           <span class="nav-icon">▦</span><span>Saved dashboards</span>
-        </button>
+        </a>
         <a class="nav-item" href="{{ url_for('main.pricing') }}">
           <span class="nav-icon">◇</span><span>Plans</span>
         </a>
@@ -180,88 +180,10 @@
         </div>
       </section>
 
-      <section id="builder-view" class="view">
-        <div class="intro-row">
-          <div><h2>Build your dashboard</h2><p>Add up to {{ plan.max_charts }} interactive charts and save the layout.</p></div>
-          <span class="step-badge">Step 2 of 2</span>
-        </div>
-
-        <div class="builder-layout">
-          <aside class="builder-controls panel">
-            <label class="field">
-              <span>Dashboard title</span>
-              <input id="dashboard-title" type="text" maxlength="100" placeholder="Monthly sales overview">
-            </label>
-            <label class="field">
-              <span>Dataset</span>
-              <select id="builder-dataset-select"><option value="">Select a dataset</option></select>
-            </label>
-            <div class="divider"></div>
-            <h3>Add a chart</h3>
-            <label class="field">
-              <span>Chart title</span>
-              <input id="chart-title" type="text" maxlength="100" placeholder="Revenue by region">
-            </label>
-            <label class="field">
-              <span>Chart type</span>
-              <select id="chart-type">
-                <option value="bar">Bar chart</option>
-                <option value="line">Line chart</option>
-                <option value="area">Area chart</option>
-                <option value="pie">Pie chart</option>
-                <option value="scatter">Scatter plot</option>
-                <option value="histogram">Histogram</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>X-axis / category</span>
-              <select id="x-column"><option value="">Select a column</option></select>
-            </label>
-            <label class="field" id="y-column-field">
-              <span>Y-axis / value</span>
-              <select id="y-column"><option value="">Count records</option></select>
-            </label>
-            <label class="field" id="aggregation-field">
-              <span>Aggregation</span>
-              <select id="aggregation">
-                <option value="none">No aggregation</option>
-                <option value="count">Count</option>
-                <option value="sum">Sum</option>
-                <option value="average">Average</option>
-              </select>
-            </label>
-            <button class="button secondary full" id="add-chart-button">＋ Add chart</button>
-          </aside>
-
-          <div class="dashboard-canvas">
-            <div class="canvas-toolbar">
-              <div><span id="chart-count">0 charts</span><small>Drag-free responsive layout</small></div>
-              <div>
-                <button class="button tertiary" id="print-dashboard-button" disabled>Print / PDF</button>
-                <button class="button primary" id="save-dashboard-button" disabled>Save dashboard</button>
-              </div>
-            </div>
-            <div id="chart-grid" class="chart-grid">
-              <div class="empty-state">
-                <span>⌁</span><h3>Your charts will appear here</h3>
-                <p>Select a dataset and configure the first chart.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="saved-view" class="view">
-        <div class="intro-row">
-          <div><h2>Saved dashboards</h2><p>Open, export or delete dashboards saved in this browser workspace.</p></div>
-        </div>
-        <div id="saved-grid" class="saved-grid"></div>
-      </section>
     </main>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </body>
 </html>

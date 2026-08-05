@@ -9,6 +9,7 @@ from io import BytesIO
 from flask import (
     Blueprint,
     Response,
+    abort,
     jsonify,
     render_template,
     request,
@@ -25,7 +26,17 @@ from .storage import Store
 from .tabular import DataLimitError, DataValidationError, clean_frame, parse_upload
 
 bp = Blueprint("main", __name__)
-CHART_TYPES = {"bar", "line", "area", "pie", "scatter", "histogram"}
+CHART_TYPES = {
+    "area",
+    "bar",
+    "histogram",
+    "kpi",
+    "line",
+    "pie",
+    "scatter",
+    "table",
+}
+AGGREGATIONS = {"none", "sum", "average", "count", "minimum", "maximum"}
 
 
 @bp.before_app_request
@@ -84,6 +95,28 @@ def index():
         plan=plan,
         max_upload_mb=plan["max_upload_mb"],
         max_dataset_rows=plan["max_dataset_rows"],
+        chart_row_limit=plan["chart_row_limit"],
+    )
+
+
+@bp.get("/builder")
+def builder():
+    return render_builder()
+
+
+@bp.get("/builder/<dashboard_id>")
+def edit_dashboard(dashboard_id):
+    if store().get_dashboard(owner_id(), dashboard_id) is None:
+        abort(404)
+    return render_builder(dashboard_id)
+
+
+def render_builder(dashboard_id: str = ""):
+    plan = active_plan()
+    return render_template(
+        "builder.html",
+        plan=plan,
+        initial_dashboard_id=dashboard_id,
         chart_row_limit=plan["chart_row_limit"],
     )
 
@@ -365,11 +398,11 @@ def validate_dashboard_payload(raw_payload):
         if y_column and y_column not in columns:
             return None, "A chart references an unknown Y-axis column."
         aggregation = chart.get("aggregation")
-        if aggregation in {"sum", "average"}:
+        if aggregation in {"sum", "average", "minimum", "maximum"}:
             if not y_column:
-                return None, "Sum and average charts require a Y-axis column."
+                return None, "This aggregation requires a Y-axis column."
             if dataset.get("column_types", {}).get(y_column) != "number":
-                return None, "Sum and average require a numeric Y-axis column."
+                return None, "This aggregation requires a numeric Y-axis column."
         validated_charts.append(
             {
                 "id": str(chart.get("id") or secrets.token_hex(6)),
@@ -377,9 +410,16 @@ def validate_dashboard_payload(raw_payload):
                 "type": chart_type,
                 "x": x_column,
                 "y": y_column,
-                "aggregation": aggregation
-                if aggregation in {"none", "sum", "average", "count"}
-                else "none",
+                "aggregation": aggregation if aggregation in AGGREGATIONS else "none",
+                "sort": chart.get("sort")
+                if chart.get("sort") in {"default", "ascending", "descending"}
+                else "default",
+                "top_n": chart.get("top_n")
+                if chart.get("top_n") in {0, 5, 10, 20}
+                else 0,
+                "size": chart.get("size")
+                if chart.get("size") in {"half", "full"}
+                else "half",
             }
         )
 

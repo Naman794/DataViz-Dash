@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 from bson import BSON, ObjectId
+from bson.errors import InvalidId
 
 from .tabular import (
     DataValidationError,
@@ -464,5 +465,5 @@ class Store:
     def _object_id(value):
         try:
             return ObjectId(value)
-        except (TypeError, ValueError):
+        except (InvalidId, TypeError, ValueError):
             return None
