@@ -49,6 +49,8 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b"Dashboard canvas" in builder.data
     assert b"KPI" in builder.data
     assert b"Table" in builder.data
+    assert b"Dashboard filters" in builder.data
+    assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
 
     dataset = upload_dataset(client)
@@ -65,6 +67,7 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
                 "sort": "descending",
                 "top_n": 5,
                 "size": "half",
+                "date_group": "none",
             },
             {
                 "title": "Sales records",
@@ -75,6 +78,34 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
                 "size": "full",
             },
         ],
+        "filters": [
+            {
+                "id": "region-filter",
+                "column": "Region",
+                "mode": "category",
+                "value": "North",
+            },
+            {
+                "id": "sales-filter",
+                "column": "Sales",
+                "mode": "number",
+                "minimum": 5,
+                "maximum": 20,
+            },
+            {
+                "id": "notes-filter",
+                "column": "Notes",
+                "mode": "missing",
+                "behavior": "exclude",
+            },
+            {
+                "id": "date-filter",
+                "column": "Region",
+                "mode": "date",
+                "start": "2025-01-01",
+                "end": "2025-12-31",
+            },
+        ],
     }
     created = client.post("/api/dashboards", json=payload)
     assert created.status_code == 201
@@ -82,7 +113,12 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert dashboard["charts"][0]["type"] == "kpi"
     assert dashboard["charts"][0]["aggregation"] == "maximum"
     assert dashboard["charts"][0]["top_n"] == 5
+    assert dashboard["charts"][0]["date_group"] == "none"
     assert dashboard["charts"][1]["size"] == "full"
+    assert dashboard["filters"][0]["value"] == "North"
+    assert dashboard["filters"][1]["minimum"] == 5.0
+    assert dashboard["filters"][2]["behavior"] == "exclude"
+    assert dashboard["filters"][3]["start"] == "2025-01-01"
 
     edit_page = client.get(f"/builder/{dashboard['id']}")
     assert edit_page.status_code == 200
@@ -91,6 +127,83 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert client.application.test_client().get(
         f"/builder/{dashboard['id']}"
     ).status_code == 404
+
+
+def test_dashboard_filter_validation_rejects_unsafe_payloads(client):
+    dataset = upload_dataset(client)
+    chart = {
+        "title": "Sales",
+        "type": "bar",
+        "x": "Region",
+        "y": "Sales",
+        "aggregation": "sum",
+    }
+
+    invalid_cases = [
+        [{"column": "Unknown", "mode": "category", "value": "North"}],
+        [{"column": "Sales", "mode": "number", "minimum": [1]}],
+        [{"column": "Region", "mode": "date", "start": "not-a-date"}],
+        [{"column": "Notes", "mode": "missing", "behavior": "invalid"}],
+    ]
+    for filters in invalid_cases:
+        response = client.post(
+            "/api/dashboards",
+            json={
+                "title": "Invalid filters",
+                "dataset_id": dataset["id"],
+                "charts": [chart],
+                "filters": filters,
+            },
+        )
+        assert response.status_code == 400
+
+
+def test_legacy_dashboard_payload_defaults_to_no_filters(client):
+    dataset = upload_dataset(client)
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Legacy dashboard",
+            "dataset_id": dataset["id"],
+            "charts": [
+                {
+                    "title": "Sales",
+                    "type": "bar",
+                    "x": "Region",
+                    "y": "Sales",
+                    "aggregation": "sum",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["dashboard"]["filters"] == []
+    assert response.get_json()["dashboard"]["charts"][0]["date_group"] == "none"
+
+
+def test_dashboard_persists_date_grouping_for_supported_charts(client):
+    dataset = upload_dataset(client)
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Monthly trend",
+            "dataset_id": dataset["id"],
+            "charts": [
+                {
+                    "title": "Monthly sales",
+                    "type": "line",
+                    "x": "Region",
+                    "y": "Sales",
+                    "aggregation": "sum",
+                    "date_group": "month",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["dashboard"]["charts"][0]["date_group"] == "month"
 
 
 def test_oversized_upload_returns_configured_limit():

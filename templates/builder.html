@@ -53,6 +53,34 @@
       </div>
     </section>
 
+    <section class="dashboard-filters" aria-labelledby="dashboard-filters-title">
+      <div class="filter-heading">
+        <div><span class="rail-kicker">GLOBAL</span><h2 id="dashboard-filters-title">Dashboard filters</h2><p>Every active filter applies to every visual.</p></div>
+        <div><span class="filtered-row-count" id="builder-filtered-count">No dataset selected</span><button class="clear-filter-button" id="builder-reset-filters" type="button" disabled>Reset all</button></div>
+      </div>
+      <div class="filter-composer">
+        <label class="field"><span>Field</span><select id="builder-filter-column"><option value="">Select a field</option></select></label>
+        <label class="field"><span>Filter type</span><select id="builder-filter-mode">
+          <option value="category">Category equals</option>
+          <option value="number">Number range</option>
+          <option value="date">Date range</option>
+          <option value="missing">Missing values</option>
+        </select></label>
+        <label class="field filter-value-field" id="builder-category-filter-field"><span>Value</span><select id="builder-filter-category"><option value="">Select a value</option></select></label>
+        <div class="filter-range hidden" id="builder-number-filter-fields">
+          <label class="field"><span>Minimum</span><input id="builder-filter-minimum" type="number" step="any" placeholder="Any"></label>
+          <label class="field"><span>Maximum</span><input id="builder-filter-maximum" type="number" step="any" placeholder="Any"></label>
+        </div>
+        <div class="filter-range hidden" id="builder-date-filter-fields">
+          <label class="field"><span>Start</span><input id="builder-filter-start" type="date"></label>
+          <label class="field"><span>End</span><input id="builder-filter-end" type="date"></label>
+        </div>
+        <label class="field filter-value-field hidden" id="builder-missing-filter-field"><span>Blank rows</span><select id="builder-filter-missing"><option value="exclude">Exclude missing</option><option value="only">Only missing</option></select></label>
+        <button class="button secondary compact filter-add-button" id="builder-add-filter" type="button" disabled>＋ Add filter</button>
+      </div>
+      <div class="filter-chips" id="builder-filter-chips"><span class="filter-empty">No filters applied.</span></div>
+    </section>
+
     <div class="builder-workbench">
       <aside class="builder-rail fields-rail">
         <section>
@@ -102,6 +130,7 @@
         <div class="property-form">
           <label class="field"><span>Visual title</span><input id="builder-visual-title" maxlength="100" placeholder="Revenue by region"></label>
           <label class="field"><span id="builder-x-label">Category / X-axis</span><select id="builder-x-column"><option value="">Select a field</option></select></label>
+          <label class="field" id="builder-date-group-field"><span>Date grouping</span><select id="builder-date-group"><option value="none">No grouping</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option></select></label>
           <label class="field" id="builder-y-field"><span>Value / Y-axis</span><select id="builder-y-column"><option value="">Count records</option></select></label>
           <label class="field" id="builder-aggregation-field"><span>Aggregation</span><select id="builder-aggregation">
             <option value="count">Count</option>

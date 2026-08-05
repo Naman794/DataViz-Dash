@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import secrets
+from datetime import date
 from io import BytesIO
 
 from flask import (
@@ -37,6 +38,8 @@ CHART_TYPES = {
     "table",
 }
 AGGREGATIONS = {"none", "sum", "average", "count", "minimum", "maximum"}
+FILTER_MODES = {"category", "number", "date", "missing"}
+MAX_DASHBOARD_FILTERS = 8
 
 
 @bp.before_app_request
@@ -370,6 +373,7 @@ def validate_dashboard_payload(raw_payload):
     title = str(payload.get("title", "")).strip()
     dataset_id = str(payload.get("dataset_id", "")).strip()
     charts = payload.get("charts")
+    filters = payload.get("filters", [])
 
     if not title or len(title) > 100:
         return None, "Dashboard title must contain 1 to 100 characters."
@@ -382,6 +386,9 @@ def validate_dashboard_payload(raw_payload):
             f"Your current plan supports between 1 and {max_charts} charts "
             "per dashboard."
         )
+    validated_filters, filter_error = validate_dashboard_filters(filters, dataset)
+    if filter_error:
+        return None, filter_error
 
     validated_charts = []
     columns = set(dataset["columns"])
@@ -391,18 +398,30 @@ def validate_dashboard_payload(raw_payload):
         chart_type = chart.get("type")
         x_column = chart.get("x")
         y_column = chart.get("y") or None
-        if chart_type not in CHART_TYPES:
+        if not isinstance(chart_type, str) or chart_type not in CHART_TYPES:
             return None, "A chart contains an unsupported type."
-        if x_column not in columns:
+        if not isinstance(x_column, str) or x_column not in columns:
             return None, "A chart references an unknown X-axis column."
-        if y_column and y_column not in columns:
+        if y_column and (not isinstance(y_column, str) or y_column not in columns):
             return None, "A chart references an unknown Y-axis column."
         aggregation = chart.get("aggregation")
+        if not isinstance(aggregation, str):
+            aggregation = "none"
         if aggregation in {"sum", "average", "minimum", "maximum"}:
             if not y_column:
                 return None, "This aggregation requires a Y-axis column."
             if dataset.get("column_types", {}).get(y_column) != "number":
                 return None, "This aggregation requires a numeric Y-axis column."
+        date_group = chart.get("date_group", "none")
+        if not isinstance(date_group, str) or date_group not in {
+            "none",
+            "month",
+            "quarter",
+            "year",
+        }:
+            date_group = "none"
+        if date_group != "none" and chart_type not in {"area", "bar", "line", "pie"}:
+            return None, "Date grouping is not supported for this visual type."
         validated_charts.append(
             {
                 "id": str(chart.get("id") or secrets.token_hex(6)),
@@ -412,14 +431,19 @@ def validate_dashboard_payload(raw_payload):
                 "y": y_column,
                 "aggregation": aggregation if aggregation in AGGREGATIONS else "none",
                 "sort": chart.get("sort")
-                if chart.get("sort") in {"default", "ascending", "descending"}
+                if isinstance(chart.get("sort"), str)
+                and chart.get("sort") in {"default", "ascending", "descending"}
                 else "default",
                 "top_n": chart.get("top_n")
-                if chart.get("top_n") in {0, 5, 10, 20}
+                if isinstance(chart.get("top_n"), int)
+                and not isinstance(chart.get("top_n"), bool)
+                and chart.get("top_n") in {0, 5, 10, 20}
                 else 0,
                 "size": chart.get("size")
-                if chart.get("size") in {"half", "full"}
+                if isinstance(chart.get("size"), str)
+                and chart.get("size") in {"half", "full"}
                 else "half",
+                "date_group": date_group,
             }
         )
 
@@ -427,4 +451,93 @@ def validate_dashboard_payload(raw_payload):
         "title": title,
         "dataset_id": dataset_id,
         "charts": validated_charts,
+        "filters": validated_filters,
     }, None
+
+
+def validate_dashboard_filters(filters, dataset):
+    if not isinstance(filters, list) or len(filters) > MAX_DASHBOARD_FILTERS:
+        return None, (
+            f"A dashboard can contain up to {MAX_DASHBOARD_FILTERS} global filters."
+        )
+
+    columns = set(dataset["columns"])
+    validated = []
+    for item in filters:
+        if not isinstance(item, dict):
+            return None, "Every dashboard filter must be a valid object."
+        column = item.get("column")
+        mode = item.get("mode")
+        if not isinstance(column, str) or column not in columns:
+            return None, "A dashboard filter references an unknown column."
+        if not isinstance(mode, str) or mode not in FILTER_MODES:
+            return None, "A dashboard filter has an unsupported mode."
+
+        document = {
+            "id": str(item.get("id") or secrets.token_hex(6))[:100],
+            "column": column,
+            "mode": mode,
+        }
+        if mode == "category":
+            value = str(item.get("value", ""))
+            if not value:
+                return None, "Category filters require a value."
+            if len(value) > 500:
+                return None, "Category filter values cannot exceed 500 characters."
+            document["value"] = value
+        elif mode == "number":
+            raw_minimum = item.get("minimum")
+            raw_maximum = item.get("maximum")
+            minimum = optional_number(raw_minimum)
+            maximum = optional_number(raw_maximum)
+            if (raw_minimum is not None and raw_minimum != "" and minimum is None) or (
+                raw_maximum is not None and raw_maximum != "" and maximum is None
+            ):
+                return None, "Number filter boundaries must be valid numbers."
+            if minimum is None and maximum is None:
+                return None, "Number filters require a minimum or maximum."
+            if minimum is not None and maximum is not None and minimum > maximum:
+                return None, "A number filter minimum cannot exceed its maximum."
+            document.update({"minimum": minimum, "maximum": maximum})
+        elif mode == "date":
+            raw_start = item.get("start")
+            raw_end = item.get("end")
+            start = optional_iso_date(raw_start)
+            end = optional_iso_date(raw_end)
+            if (raw_start is not None and raw_start != "" and start is None) or (
+                raw_end is not None and raw_end != "" and end is None
+            ):
+                return None, "Date filter boundaries must use YYYY-MM-DD."
+            if start is None and end is None:
+                return None, "Date filters require a start or end date."
+            if start and end and start > end:
+                return None, "A date filter start cannot be after its end."
+            document.update({"start": start, "end": end})
+        else:
+            behavior = item.get("behavior")
+            if not isinstance(behavior, str) or behavior not in {"only", "exclude"}:
+                return None, "Missing-value filters must include or exclude blanks."
+            document["behavior"] = behavior
+        validated.append(document)
+    return validated, None
+
+
+def optional_number(value):
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number and abs(number) != float("inf") else None
+
+
+def optional_iso_date(value):
+    if value is None or value == "":
+        return None
+    try:
+        return date.fromisoformat(str(value)).isoformat()
+    except ValueError:
+        return None

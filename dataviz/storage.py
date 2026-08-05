@@ -114,6 +114,7 @@ class Store:
             "title": payload["title"],
             "dataset_id": payload["dataset_id"],
             "charts": payload["charts"],
+            "filters": payload.get("filters", []),
             "created_at": now,
             "updated_at": now,
         }
@@ -129,6 +130,7 @@ class Store:
             "title": payload["title"],
             "dataset_id": payload["dataset_id"],
             "charts": payload["charts"],
+            "filters": payload.get("filters", []),
             "updated_at": utc_now(),
         }
         result = self.db.dashboards.find_one_and_update(
@@ -457,6 +459,7 @@ class Store:
             "title": document["title"],
             "dataset_id": document["dataset_id"],
             "charts": document.get("charts", []),
+            "filters": document.get("filters", []),
             "created_at": document["created_at"].isoformat(),
             "updated_at": document["updated_at"].isoformat(),
         }
