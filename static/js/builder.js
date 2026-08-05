@@ -3,8 +3,10 @@ const builderState = {
   dashboards: [],
   dataset: null,
   rows: [],
+  filteredRows: [],
   rowsTruncated: false,
   charts: [],
+  filters: [],
   editingDashboardId: document.body.dataset.initialDashboardId || null,
   selectedChartId: null,
   selectedField: null,
@@ -30,10 +32,18 @@ function cacheBuilderElements() {
     "builder-db-status", "builder-dashboard-title", "builder-page-dataset",
     "builder-save-state", "builder-new-button", "builder-print-button",
     "builder-save-button", "builder-field-count", "builder-field-search",
+    "builder-filtered-count", "builder-filter-column", "builder-filter-mode",
+    "builder-category-filter-field", "builder-filter-category",
+    "builder-number-filter-fields", "builder-filter-minimum",
+    "builder-filter-maximum", "builder-date-filter-fields",
+    "builder-filter-start", "builder-filter-end", "builder-missing-filter-field",
+    "builder-filter-missing", "builder-add-filter", "builder-reset-filters",
+    "builder-filter-chips",
     "builder-field-list", "builder-field-profile", "builder-saved-count",
     "builder-saved-list", "builder-canvas-description", "builder-visual-count",
     "builder-analysis-grid", "builder-properties-title", "builder-visual-types",
     "builder-visual-title", "builder-x-label", "builder-x-column",
+    "builder-date-group-field", "builder-date-group",
     "builder-y-field", "builder-y-column", "builder-aggregation-field",
     "builder-aggregation", "builder-sort-field", "builder-sort",
     "builder-top-field", "builder-top-n", "builder-visual-size",
@@ -44,6 +54,10 @@ function cacheBuilderElements() {
 function bindBuilderEvents() {
   builderElements["builder-page-dataset"].addEventListener("change", changeDataset);
   builderElements["builder-field-search"].addEventListener("input", renderFields);
+  builderElements["builder-filter-column"].addEventListener("change", prepareFilterComposer);
+  builderElements["builder-filter-mode"].addEventListener("change", updateFilterComposer);
+  builderElements["builder-add-filter"].addEventListener("click", addDashboardFilter);
+  builderElements["builder-reset-filters"].addEventListener("click", resetDashboardFilters);
   builderElements["builder-visual-types"].addEventListener("click", (event) => {
     const button = event.target.closest("[data-visual-type]");
     if (button) setVisualType(button.dataset.visualType);
@@ -104,13 +118,14 @@ async function loadBuilderDatasets() {
 
 async function changeDataset(event) {
   const datasetId = event.target.value;
-  if (builderState.charts.length && builderState.dataset?.id !== datasetId) {
-    const confirmed = window.confirm("Changing the dataset will clear the visuals on this canvas. Continue?");
+  if ((builderState.charts.length || builderState.filters.length) && builderState.dataset?.id !== datasetId) {
+    const confirmed = window.confirm("Changing the dataset will clear the visuals and global filters on this canvas. Continue?");
     if (!confirmed) {
       event.target.value = builderState.dataset?.id || "";
       return;
     }
     builderState.charts = [];
+    builderState.filters = [];
     builderState.editingDashboardId = null;
     resetVisualForm();
   }
@@ -131,26 +146,32 @@ async function loadBuilderDataset(datasetId) {
   const result = await builderApi(`/api/datasets/${datasetId}?limit=${builderLimits.chartRows}`);
   builderState.dataset = result.dataset;
   builderState.rows = result.rows;
+  builderState.filteredRows = result.rows;
   builderState.rowsTruncated = result.truncated;
   builderElements["builder-page-dataset"].value = datasetId;
   populateFieldSelects();
+  populateFilterColumns();
   renderFields();
   renderFieldProfile(null);
-  builderElements["builder-canvas-description"].textContent = result.truncated
-    ? `Analysis uses the first ${builderLimits.chartRows.toLocaleString()} rows allowed by your plan.`
-    : `${result.dataset.row_count.toLocaleString()} rows available for analysis.`;
+  refreshFilteredRows();
+  renderFilterChips();
   builderElements["builder-save-button"].disabled = builderState.charts.length === 0;
 }
 
 function clearBuilderDataset() {
   builderState.dataset = null;
   builderState.rows = [];
+  builderState.filteredRows = [];
+  builderState.filters = [];
   builderState.rowsTruncated = false;
   builderState.selectedField = null;
   builderElements["builder-field-count"].textContent = "0";
   builderElements["builder-field-list"].innerHTML = '<p class="rail-empty">Choose a dataset to inspect its fields.</p>';
   renderFieldProfile(null);
   populateFieldSelects();
+  populateFilterColumns();
+  refreshFilteredRows();
+  renderFilterChips();
   renderVisuals();
 }
 
@@ -168,6 +189,209 @@ function populateFieldSelects() {
   });
   if (columns.includes(previousX)) x.value = previousX;
   if (columns.includes(previousY)) y.value = previousY;
+}
+
+function populateFilterColumns() {
+  const select = builderElements["builder-filter-column"];
+  const columns = builderState.dataset?.columns || [];
+  select.replaceChildren(new Option("Select a field", ""));
+  columns.forEach((column) => select.append(new Option(column, column)));
+  builderElements["builder-add-filter"].disabled = columns.length === 0;
+  populateCategoryFilterValues("");
+}
+
+function prepareFilterComposer() {
+  const column = builderElements["builder-filter-column"].value;
+  const type = builderState.dataset?.column_types[column];
+  if (type === "number") builderElements["builder-filter-mode"].value = "number";
+  else if (type === "date") builderElements["builder-filter-mode"].value = "date";
+  else builderElements["builder-filter-mode"].value = "category";
+  populateCategoryFilterValues(column);
+  updateFilterComposer();
+}
+
+function populateCategoryFilterValues(column) {
+  const select = builderElements["builder-filter-category"];
+  select.replaceChildren(new Option("Select a value", ""));
+  if (!column) return;
+  const values = [...new Set(
+    builderState.rows
+      .map((row) => row[column])
+      .filter((value) => !isMissingValue(value))
+      .map(String),
+  )].sort((first, second) => first.localeCompare(second, undefined, { numeric: true })).slice(0, 200);
+  values.forEach((value) => select.append(new Option(value, value)));
+}
+
+function updateFilterComposer() {
+  const mode = builderElements["builder-filter-mode"].value;
+  builderElements["builder-category-filter-field"].classList.toggle("hidden", mode !== "category");
+  builderElements["builder-number-filter-fields"].classList.toggle("hidden", mode !== "number");
+  builderElements["builder-date-filter-fields"].classList.toggle("hidden", mode !== "date");
+  builderElements["builder-missing-filter-field"].classList.toggle("hidden", mode !== "missing");
+}
+
+function addDashboardFilter() {
+  if (!builderState.dataset) return showBuilderToast("Choose a dataset first.", true);
+  if (builderState.filters.length >= 8) return showBuilderToast("A dashboard can contain up to 8 global filters.", true);
+  const column = builderElements["builder-filter-column"].value;
+  const mode = builderElements["builder-filter-mode"].value;
+  if (!column) return showBuilderToast("Select a field to filter.", true);
+  const filter = {
+    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+    column,
+    mode,
+  };
+  if (mode === "category") {
+    filter.value = builderElements["builder-filter-category"].value;
+    if (!filter.value) return showBuilderToast("Select a category value.", true);
+  } else if (mode === "number") {
+    const minimum = builderElements["builder-filter-minimum"].value;
+    const maximum = builderElements["builder-filter-maximum"].value;
+    if (minimum === "" && maximum === "") return showBuilderToast("Enter a minimum or maximum.", true);
+    filter.minimum = minimum === "" ? null : Number(minimum);
+    filter.maximum = maximum === "" ? null : Number(maximum);
+    if (filter.minimum !== null && filter.maximum !== null && filter.minimum > filter.maximum) {
+      return showBuilderToast("The minimum cannot exceed the maximum.", true);
+    }
+  } else if (mode === "date") {
+    filter.start = builderElements["builder-filter-start"].value || null;
+    filter.end = builderElements["builder-filter-end"].value || null;
+    if (!filter.start && !filter.end) return showBuilderToast("Choose a start or end date.", true);
+    if (filter.start && filter.end && filter.start > filter.end) {
+      return showBuilderToast("The start date cannot be after the end date.", true);
+    }
+  } else {
+    filter.behavior = builderElements["builder-filter-missing"].value;
+  }
+  builderState.filters.push(filter);
+  clearFilterComposerValues();
+  refreshFilteredRows();
+  renderFilterChips();
+  renderVisuals();
+  markUnsaved();
+}
+
+function clearFilterComposerValues() {
+  builderElements["builder-filter-category"].value = "";
+  builderElements["builder-filter-minimum"].value = "";
+  builderElements["builder-filter-maximum"].value = "";
+  builderElements["builder-filter-start"].value = "";
+  builderElements["builder-filter-end"].value = "";
+}
+
+function resetDashboardFilters() {
+  if (!builderState.filters.length) return;
+  builderState.filters = [];
+  refreshFilteredRows();
+  renderFilterChips();
+  renderVisuals();
+  markUnsaved();
+}
+
+function removeDashboardFilter(filterId) {
+  builderState.filters = builderState.filters.filter((filter) => filter.id !== filterId);
+  refreshFilteredRows();
+  renderFilterChips();
+  renderVisuals();
+  markUnsaved();
+}
+
+function renderFilterChips() {
+  const container = builderElements["builder-filter-chips"];
+  container.replaceChildren();
+  builderElements["builder-reset-filters"].disabled = builderState.filters.length === 0;
+  if (!builderState.filters.length) {
+    const empty = document.createElement("span");
+    empty.className = "filter-empty";
+    empty.textContent = "No filters applied.";
+    container.append(empty);
+    return;
+  }
+  builderState.filters.forEach((filter) => {
+    const chip = document.createElement("span");
+    chip.className = "filter-chip";
+    const label = document.createElement("span");
+    label.textContent = describeFilter(filter);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove ${filter.column} filter`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => removeDashboardFilter(filter.id));
+    chip.append(label, remove);
+    container.append(chip);
+  });
+}
+
+function describeFilter(filter) {
+  if (filter.mode === "category") return `${filter.column} = ${filter.value}`;
+  if (filter.mode === "number") return `${filter.column}: ${filter.minimum ?? "any"} to ${filter.maximum ?? "any"}`;
+  if (filter.mode === "date") return `${filter.column}: ${filter.start || "any"} to ${filter.end || "any"}`;
+  return `${filter.column}: ${filter.behavior === "only" ? "only missing" : "exclude missing"}`;
+}
+
+function refreshFilteredRows() {
+  builderState.filteredRows = builderState.filters.reduce(
+    (rows, filter) => rows.filter((row) => rowMatchesFilter(row, filter)),
+    builderState.rows,
+  );
+  const count = builderElements["builder-filtered-count"];
+  if (!builderState.dataset) {
+    count.textContent = "No dataset selected";
+    builderElements["builder-canvas-description"].textContent = "Select a dataset, then add your first visual.";
+    return;
+  }
+  count.textContent = `${builderState.filteredRows.length.toLocaleString()} of ${builderState.rows.length.toLocaleString()} rows`;
+  const sourceMessage = builderState.rowsTruncated
+    ? `Using the first ${builderLimits.chartRows.toLocaleString()} rows allowed by your plan.`
+    : `${builderState.dataset.row_count.toLocaleString()} source rows.`;
+  builderElements["builder-canvas-description"].textContent = builderState.filters.length
+    ? `${builderState.filteredRows.length.toLocaleString()} rows match ${builderState.filters.length} global filter${builderState.filters.length === 1 ? "" : "s"}. ${sourceMessage}`
+    : sourceMessage;
+}
+
+function rowMatchesFilter(row, filter) {
+  const value = row[filter.column];
+  if (filter.mode === "missing") {
+    return filter.behavior === "only" ? isMissingValue(value) : !isMissingValue(value);
+  }
+  if (isMissingValue(value)) return false;
+  if (filter.mode === "category") return String(value) === filter.value;
+  if (filter.mode === "number") {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return false;
+    return (filter.minimum === null || numeric >= filter.minimum)
+      && (filter.maximum === null || numeric <= filter.maximum);
+  }
+  const parsed = parseDashboardDate(value);
+  if (!parsed) return false;
+  const dateValue = parsed.toISOString().slice(0, 10);
+  return (!filter.start || dateValue >= filter.start) && (!filter.end || dateValue <= filter.end);
+}
+
+function isMissingValue(value) {
+  return value === null || value === undefined || (typeof value === "string" && value.trim() === "");
+}
+
+function parseDashboardDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim();
+  if (!cleaned) return null;
+  const timestamp = /^\d{4}-\d{2}-\d{2}$/.test(cleaned)
+    ? Date.parse(`${cleaned}T00:00:00Z`)
+    : Date.parse(cleaned);
+  return Number.isNaN(timestamp) ? null : new Date(timestamp);
+}
+
+function groupDashboardDate(value, grouping) {
+  const parsed = parseDashboardDate(value);
+  if (!parsed) return null;
+  const year = parsed.getUTCFullYear();
+  const month = parsed.getUTCMonth() + 1;
+  if (grouping === "year") return String(year);
+  if (grouping === "quarter") return `${year} Q${Math.ceil(month / 3)}`;
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function renderFields() {
@@ -264,10 +488,13 @@ function setVisualType(type) {
   const histogram = type === "histogram";
   const table = type === "table";
   const kpi = type === "kpi";
+  const supportsDateGrouping = ["area", "bar", "line", "pie"].includes(type);
   builderElements["builder-y-field"].classList.toggle("hidden", histogram);
   builderElements["builder-aggregation-field"].classList.toggle("hidden", histogram || table);
   builderElements["builder-sort-field"].classList.toggle("hidden", histogram || table || kpi);
   builderElements["builder-top-field"].classList.toggle("hidden", histogram || kpi);
+  builderElements["builder-date-group-field"].classList.toggle("hidden", !supportsDateGrouping);
+  if (!supportsDateGrouping) builderElements["builder-date-group"].value = "none";
   builderElements["builder-x-label"].textContent = table ? "First table column" : (kpi ? "Count / label field" : "Category / X-axis");
   if (kpi && builderElements["builder-aggregation"].value === "none") {
     builderElements["builder-aggregation"].value = "count";
@@ -284,6 +511,7 @@ function saveVisual() {
   const x = builderElements["builder-x-column"].value;
   const y = type === "histogram" ? null : builderElements["builder-y-column"].value || null;
   const aggregation = type === "histogram" || type === "table" ? "none" : builderElements["builder-aggregation"].value;
+  const dateGroup = builderElements["builder-date-group"].value;
   if (!x) return showBuilderToast("Select a field for this visual.", true);
   if (type === "scatter" && !y) return showBuilderToast("Scatter plots require a Y-axis field.", true);
   if (["sum", "average", "minimum", "maximum"].includes(aggregation)) {
@@ -291,6 +519,10 @@ function saveVisual() {
     if (builderState.dataset.column_types[y] !== "number") {
       return showBuilderToast("Choose a numeric value field for this aggregation.", true);
     }
+  }
+  if (dateGroup !== "none") {
+    const hasDate = builderState.filteredRows.some((row) => parseDashboardDate(row[x]));
+    if (!hasDate) return showBuilderToast("Date grouping requires a field containing valid dates.", true);
   }
   const chart = {
     id: editing?.id || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
@@ -302,6 +534,7 @@ function saveVisual() {
     sort: builderElements["builder-sort"].value,
     top_n: Number(builderElements["builder-top-n"].value),
     size: builderElements["builder-visual-size"].value,
+    date_group: dateGroup,
   };
   if (editing) {
     builderState.charts = builderState.charts.map((item) => item.id === chart.id ? chart : item);
@@ -401,16 +634,19 @@ function renderPlot(card, chart) {
 }
 
 function buildBuilderTrace(chart) {
-  const validRows = builderState.rows.filter((row) => row[chart.x] !== null && row[chart.x] !== undefined && row[chart.x] !== "");
+  const validRows = builderState.filteredRows.filter((row) => !isMissingValue(row[chart.x]));
   if (chart.type === "histogram") {
     return { type: "histogram", x: validRows.map((row) => row[chart.x]), marker: { color: "#6d5dfc" } };
   }
   let points;
-  const grouped = chart.aggregation !== "none" || (!chart.y && ["bar", "line", "area", "pie"].includes(chart.type));
+  const grouped = chart.aggregation !== "none" || (chart.date_group || "none") !== "none" || (!chart.y && ["bar", "line", "area", "pie"].includes(chart.type));
   if (grouped) {
     const groups = new Map();
     validRows.forEach((row) => {
-      const key = String(row[chart.x]);
+      const key = chart.date_group && chart.date_group !== "none"
+        ? groupDashboardDate(row[chart.x], chart.date_group)
+        : String(row[chart.x]);
+      if (key === null) return;
       const group = groups.get(key) || { values: [], count: 0 };
       const numeric = chart.y ? Number(row[chart.y]) : 1;
       if (Number.isFinite(numeric)) group.values.push(numeric);
@@ -420,6 +656,9 @@ function buildBuilderTrace(chart) {
     points = [...groups].map(([x, group]) => ({ x, y: aggregateValues(group, chart.aggregation) }));
   } else {
     points = validRows.map((row) => ({ x: row[chart.x], y: chart.y ? row[chart.y] : 1 }));
+  }
+  if (chart.date_group && chart.date_group !== "none" && chart.sort === "default") {
+    points.sort((first, second) => String(first.x).localeCompare(String(second.x)));
   }
   if (chart.sort === "ascending") points.sort((a, b) => Number(a.y) - Number(b.y));
   if (chart.sort === "descending" || (chart.top_n && chart.sort === "default")) points.sort((a, b) => Number(b.y) - Number(a.y));
@@ -450,7 +689,7 @@ function renderKpi(card, chart) {
   label.textContent = chart.title;
   const value = document.createElement("strong");
   const field = chart.y || chart.x;
-  const values = builderState.rows.map((row) => row[field]).filter((item) => item !== null && item !== undefined && item !== "");
+  const values = builderState.filteredRows.map((row) => row[field]).filter((item) => !isMissingValue(item));
   const numeric = values.map(Number).filter(Number.isFinite);
   let metric = values.length;
   if (chart.aggregation === "sum") metric = numeric.reduce((sum, item) => sum + item, 0);
@@ -478,7 +717,7 @@ function renderDataTable(card, chart) {
   });
   head.append(headingRow);
   const body = document.createElement("tbody");
-  builderState.rows.slice(0, chart.top_n || 20).forEach((row) => {
+  builderState.filteredRows.slice(0, chart.top_n || 20).forEach((row) => {
     const tableRow = document.createElement("tr");
     columns.forEach((column) => {
       const cell = document.createElement("td");
@@ -504,6 +743,7 @@ function editVisual(chartId) {
   builderElements["builder-sort"].value = chart.sort || "default";
   builderElements["builder-top-n"].value = String(chart.top_n || 0);
   builderElements["builder-visual-size"].value = chart.size || "half";
+  builderElements["builder-date-group"].value = chart.date_group || "none";
   builderElements["builder-properties-title"].textContent = "Edit visual";
   builderElements["builder-add-visual"].textContent = "Update visual";
   builderElements["builder-cancel-edit"].classList.remove("hidden");
@@ -519,6 +759,7 @@ function resetVisualForm() {
   builderElements["builder-sort"].value = "default";
   builderElements["builder-top-n"].value = "0";
   builderElements["builder-visual-size"].value = "half";
+  builderElements["builder-date-group"].value = "none";
   builderElements["builder-properties-title"].textContent = "Add a visual";
   builderElements["builder-add-visual"].textContent = "＋ Add visual";
   builderElements["builder-cancel-edit"].classList.add("hidden");
@@ -530,7 +771,12 @@ async function saveDashboard() {
   const title = builderElements["builder-dashboard-title"].value.trim();
   if (!title) return showBuilderToast("Enter a dashboard title.", true);
   if (!builderState.dataset || !builderState.charts.length) return showBuilderToast("Add at least one visual before saving.", true);
-  const payload = { title, dataset_id: builderState.dataset.id, charts: builderState.charts };
+  const payload = {
+    title,
+    dataset_id: builderState.dataset.id,
+    charts: builderState.charts,
+    filters: builderState.filters,
+  };
   const updating = Boolean(builderState.editingDashboardId);
   try {
     const result = await builderApi(updating ? `/api/dashboards/${builderState.editingDashboardId}` : "/api/dashboards", {
@@ -540,6 +786,7 @@ async function saveDashboard() {
     });
     builderState.editingDashboardId = result.dashboard.id;
     builderState.charts = result.dashboard.charts;
+    builderState.filters = result.dashboard.filters || [];
     window.history.replaceState({}, "", `/builder/${result.dashboard.id}`);
     await loadSavedDashboards();
     builderElements["builder-save-state"].textContent = "Saved just now";
@@ -588,8 +835,11 @@ async function openSavedDashboard(dashboardId, updateUrl = true) {
   const { dashboard } = await builderApi(`/api/dashboards/${dashboardId}`);
   builderState.editingDashboardId = dashboard.id;
   builderState.charts = dashboard.charts;
+  builderState.filters = dashboard.filters || [];
   builderElements["builder-dashboard-title"].value = dashboard.title;
   await loadBuilderDataset(dashboard.dataset_id);
+  refreshFilteredRows();
+  renderFilterChips();
   if (updateUrl) window.history.replaceState({}, "", `/builder/${dashboard.id}`);
   builderElements["builder-save-state"].textContent = `Saved ${formatBuilderDate(dashboard.updated_at)}`;
   renderVisuals();
@@ -610,9 +860,12 @@ async function deleteSavedDashboard(dashboard) {
 function newDashboard() {
   builderState.editingDashboardId = null;
   builderState.charts = [];
+  builderState.filters = [];
   builderElements["builder-dashboard-title"].value = "Untitled dashboard";
   builderElements["builder-save-state"].textContent = "Not saved";
   window.history.replaceState({}, "", "/builder");
+  refreshFilteredRows();
+  renderFilterChips();
   resetVisualForm();
 }
 
