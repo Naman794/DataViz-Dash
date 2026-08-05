@@ -40,6 +40,57 @@ def test_workspace_page_loads(client):
     assert b"Upload, preview and clean" in response.data
     assert b"maximum 10 MB and 100 rows" in response.data
     assert b'href="/"' in response.data
+    assert b'href="/builder"' in response.data
+
+
+def test_dedicated_builder_page_and_saved_dashboard_route(client):
+    builder = client.get("/builder")
+    assert builder.status_code == 200
+    assert b"Dashboard canvas" in builder.data
+    assert b"KPI" in builder.data
+    assert b"Table" in builder.data
+    assert b'data-chart-row-limit="100"' in builder.data
+
+    dataset = upload_dataset(client)
+    payload = {
+        "title": "Analysis workspace",
+        "dataset_id": dataset["id"],
+        "charts": [
+            {
+                "title": "Total sales",
+                "type": "kpi",
+                "x": "Region",
+                "y": "Sales",
+                "aggregation": "maximum",
+                "sort": "descending",
+                "top_n": 5,
+                "size": "half",
+            },
+            {
+                "title": "Sales records",
+                "type": "table",
+                "x": "Region",
+                "y": "Sales",
+                "aggregation": "none",
+                "size": "full",
+            },
+        ],
+    }
+    created = client.post("/api/dashboards", json=payload)
+    assert created.status_code == 201
+    dashboard = created.get_json()["dashboard"]
+    assert dashboard["charts"][0]["type"] == "kpi"
+    assert dashboard["charts"][0]["aggregation"] == "maximum"
+    assert dashboard["charts"][0]["top_n"] == 5
+    assert dashboard["charts"][1]["size"] == "full"
+
+    edit_page = client.get(f"/builder/{dashboard['id']}")
+    assert edit_page.status_code == 200
+    assert f'data-initial-dashboard-id="{dashboard["id"]}"'.encode() in edit_page.data
+    assert client.get("/builder/not-a-dashboard").status_code == 404
+    assert client.application.test_client().get(
+        f"/builder/{dashboard['id']}"
+    ).status_code == 404
 
 
 def test_oversized_upload_returns_configured_limit():

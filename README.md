@@ -41,6 +41,8 @@ then reopen, update, export, or delete them when needed.
 - Cleaned CSV download
 - Bar, line, area, pie, scatter, and histogram charts
 - Multi-chart dashboard creation and persistence
+- Dedicated full-screen builder with charts, KPI cards, data tables, and field profiles
+- Per-visual sorting, Top-N limits, editing, duplication, and responsive sizing
 - Chart PNG, dashboard JSON, and print-ready PDF exports
 - Anonymous browser-isolated workspaces
 - Email/password accounts with persistent workspace ownership
