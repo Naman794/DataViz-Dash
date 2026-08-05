@@ -24,6 +24,9 @@ def init_database(app):
 
     try:
         database.users.create_index("email", unique=True)
+        database.users.create_index(
+            [("status", ASCENDING), ("plan", ASCENDING), ("created_at", DESCENDING)]
+        )
         database.datasets.create_index(
             [("owner_id", ASCENDING), ("updated_at", DESCENDING)]
         )
@@ -32,6 +35,13 @@ def init_database(app):
         )
         database.dashboards.create_index(
             [("owner_id", ASCENDING), ("updated_at", DESCENDING)]
+        )
+        database.activity_events.create_index(
+            [("user_id", ASCENDING), ("created_at", DESCENDING)]
+        )
+        database.admin_audit.create_index([("created_at", DESCENDING)])
+        database.admin_audit.create_index(
+            [("target_user_id", ASCENDING), ("created_at", DESCENDING)]
         )
     except PyMongoError as exc:
         app.logger.warning(

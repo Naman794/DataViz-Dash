@@ -8,6 +8,7 @@ import secrets
 
 from flask import (
     Blueprint,
+    current_app,
     flash,
     g,
     redirect,
@@ -31,12 +32,28 @@ def current_user():
     if "current_user" not in g:
         user_id = session.get("user_id")
         g.current_user = Store(get_database()).get_user(user_id) if user_id else None
-        if user_id and g.current_user is None:
+        if g.current_user is not None and g.current_user.get("status") == "suspended":
+            g.current_user = None
+            session.clear()
+            session["owner_id"] = secrets.token_urlsafe(24)
+            session["csrf_token"] = secrets.token_urlsafe(32)
+        elif user_id and g.current_user is None:
             session.pop("user_id", None)
             session["owner_id"] = secrets.token_urlsafe(24)
         elif g.current_user is not None:
             session["owner_id"] = str(g.current_user["_id"])
     return g.current_user
+
+
+def is_admin_user(user=None) -> bool:
+    user = current_user() if user is None else user
+    if user is None:
+        return False
+    configured = current_app.config.get("ADMIN_EMAILS", ())
+    if isinstance(configured, str):
+        configured = configured.split(",")
+    admin_emails = {str(email).strip().lower() for email in configured}
+    return normalize_email(user.get("email", "")) in admin_emails
 
 
 def csrf_token():
@@ -76,6 +93,7 @@ def inject_account_context():
     return {
         "account_user": user,
         "account_plan": resolve_plan(user),
+        "account_is_admin": is_admin_user(user),
         "csrf_token": csrf_token,
     }
 
@@ -121,6 +139,7 @@ def register():
         return redirect(url_for("auth.account"))
 
     establish_account_session(user, session.get("owner_id"))
+    repository.record_login(str(user["_id"]), "account.registered")
     flash("Account created. Your workspace is now attached to this account.", "success")
     return redirect(url_for("main.index"))
 
@@ -138,8 +157,12 @@ def login():
     if user is None or not check_password_hash(user["password_hash"], password):
         flash("Email or password is incorrect.", "error")
         return redirect(url_for("auth.account"))
+    if user.get("status") == "suspended":
+        flash("This account is suspended. Contact the administrator.", "error")
+        return redirect(url_for("auth.account"))
 
     establish_account_session(user, session.get("owner_id"))
+    repository.record_login(str(user["_id"]))
     flash("Signed in successfully.", "success")
     return redirect(url_for("main.index"))
 
@@ -149,6 +172,9 @@ def logout():
     if not valid_csrf_token(request.form.get("csrf_token", "")):
         flash("Your form expired. Please try again.", "error")
         return redirect(url_for("auth.account"))
+    user = current_user()
+    if user is not None:
+        Store(get_database()).record_activity(str(user["_id"]), "account.logout")
     session.clear()
     session["owner_id"] = secrets.token_urlsafe(24)
     session["csrf_token"] = secrets.token_urlsafe(32)

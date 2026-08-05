@@ -7,6 +7,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def comma_separated_emails(value: str) -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys(
+            email.strip().lower() for email in value.split(",") if email.strip()
+        )
+    )
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "local-development-key-change-me")
     MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -29,6 +37,7 @@ class Config:
     PRO_DATASET_LIMIT = int(os.getenv("PRO_DATASET_LIMIT", "25"))
     PRO_DASHBOARD_LIMIT = int(os.getenv("PRO_DASHBOARD_LIMIT", "25"))
     PRO_CHART_LIMIT = int(os.getenv("PRO_CHART_LIMIT", "8"))
+    ADMIN_EMAILS = comma_separated_emails(os.getenv("ADMIN_EMAILS", ""))
     JSON_SORT_KEYS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
