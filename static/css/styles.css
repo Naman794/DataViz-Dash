@@ -7,6 +7,7 @@
   --primary: #111315;
   --primary-dark: #000000;
   --primary-soft: #ecefed;
+  --brand: #6d5dfc;
   --accent: #0f766e;
   --accent-soft: #dff1ed;
   --teal: #0f766e;
@@ -65,9 +66,9 @@ p { color: var(--muted); line-height: 1.6; }
   text-decoration: none;
 }
 
-.brand strong { color: var(--accent); }
+.brand strong { color: var(--brand); }
 .brand-mark { display: flex; height: 32px; align-items: end; gap: 3px; }
-.brand-mark span { width: 7px; border-radius: 5px; background: var(--ink); }
+.brand-mark span { width: 7px; border-radius: 5px; background: var(--brand); }
 .brand-mark span:nth-child(1) { height: 14px; opacity: .5; }
 .brand-mark span:nth-child(2) { height: 24px; opacity: .75; }
 .brand-mark span:nth-child(3) { height: 31px; }
