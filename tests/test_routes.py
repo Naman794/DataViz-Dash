@@ -49,7 +49,10 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b"Dashboard canvas" in builder.data
     assert b"KPI" in builder.data
     assert b"Table" in builder.data
-    assert b"Dashboard filters" in builder.data
+    assert b"Dashboard filters" not in builder.data
+    assert b'id="builder-toggle-fields"' in builder.data
+    assert b'id="builder-toggle-properties"' in builder.data
+    assert b'id="builder-focus-canvas"' in builder.data
     assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
 

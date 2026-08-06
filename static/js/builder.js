@@ -3,10 +3,8 @@ const builderState = {
   dashboards: [],
   dataset: null,
   rows: [],
-  filteredRows: [],
   rowsTruncated: false,
   charts: [],
-  filters: [],
   editingDashboardId: document.body.dataset.initialDashboardId || null,
   selectedChartId: null,
   selectedField: null,
@@ -32,15 +30,10 @@ function cacheBuilderElements() {
     "builder-db-status", "builder-dashboard-title", "builder-page-dataset",
     "builder-save-state", "builder-new-button", "builder-print-button",
     "builder-save-button", "builder-field-count", "builder-field-search",
-    "builder-filtered-count", "builder-filter-column", "builder-filter-mode",
-    "builder-category-filter-field", "builder-filter-category",
-    "builder-number-filter-fields", "builder-filter-minimum",
-    "builder-filter-maximum", "builder-date-filter-fields",
-    "builder-filter-start", "builder-filter-end", "builder-missing-filter-field",
-    "builder-filter-missing", "builder-add-filter", "builder-reset-filters",
-    "builder-filter-chips",
     "builder-field-list", "builder-field-profile", "builder-saved-count",
     "builder-saved-list", "builder-canvas-description", "builder-visual-count",
+    "builder-workbench", "builder-toggle-fields", "builder-toggle-properties",
+    "builder-focus-canvas",
     "builder-analysis-grid", "builder-properties-title", "builder-visual-types",
     "builder-visual-title", "builder-x-label", "builder-x-column",
     "builder-date-group-field", "builder-date-group",
@@ -54,10 +47,9 @@ function cacheBuilderElements() {
 function bindBuilderEvents() {
   builderElements["builder-page-dataset"].addEventListener("change", changeDataset);
   builderElements["builder-field-search"].addEventListener("input", renderFields);
-  builderElements["builder-filter-column"].addEventListener("change", prepareFilterComposer);
-  builderElements["builder-filter-mode"].addEventListener("change", updateFilterComposer);
-  builderElements["builder-add-filter"].addEventListener("click", addDashboardFilter);
-  builderElements["builder-reset-filters"].addEventListener("click", resetDashboardFilters);
+  builderElements["builder-toggle-fields"].addEventListener("click", () => toggleBuilderPanel("fields"));
+  builderElements["builder-toggle-properties"].addEventListener("click", () => toggleBuilderPanel("properties"));
+  builderElements["builder-focus-canvas"].addEventListener("click", toggleCanvasFocus);
   builderElements["builder-visual-types"].addEventListener("click", (event) => {
     const button = event.target.closest("[data-visual-type]");
     if (button) setVisualType(button.dataset.visualType);
@@ -71,6 +63,65 @@ function bindBuilderEvents() {
     window.print();
   });
   builderElements["builder-dashboard-title"].addEventListener("input", markUnsaved);
+  restoreBuilderLayout();
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && document.body.classList.contains("canvas-focus")) toggleCanvasFocus();
+  });
+}
+
+function restoreBuilderLayout() {
+  let layout = {};
+  try {
+    layout = JSON.parse(sessionStorage.getItem("dataviz-builder-layout") || "{}");
+  } catch (error) {
+    layout = {};
+  }
+  builderElements["builder-workbench"].classList.toggle("fields-collapsed", Boolean(layout.fieldsCollapsed));
+  builderElements["builder-workbench"].classList.toggle("properties-collapsed", Boolean(layout.propertiesCollapsed));
+  updateBuilderLayoutControls();
+}
+
+function toggleBuilderPanel(panel) {
+  builderElements["builder-workbench"].classList.toggle(`${panel}-collapsed`);
+  const layout = {
+    fieldsCollapsed: builderElements["builder-workbench"].classList.contains("fields-collapsed"),
+    propertiesCollapsed: builderElements["builder-workbench"].classList.contains("properties-collapsed"),
+  };
+  try {
+    sessionStorage.setItem("dataviz-builder-layout", JSON.stringify(layout));
+  } catch (error) {
+    // The layout still works when browser storage is unavailable.
+  }
+  updateBuilderLayoutControls();
+  resizeCanvasPlots();
+}
+
+function updateBuilderLayoutControls() {
+  const fieldsCollapsed = builderElements["builder-workbench"].classList.contains("fields-collapsed");
+  const propertiesCollapsed = builderElements["builder-workbench"].classList.contains("properties-collapsed");
+  const fieldsButton = builderElements["builder-toggle-fields"];
+  const propertiesButton = builderElements["builder-toggle-properties"];
+  fieldsButton.textContent = fieldsCollapsed ? "›" : "‹";
+  fieldsButton.setAttribute("aria-expanded", String(!fieldsCollapsed));
+  fieldsButton.setAttribute("aria-label", `${fieldsCollapsed ? "Expand" : "Collapse"} Fields panel`);
+  propertiesButton.textContent = propertiesCollapsed ? "‹" : "›";
+  propertiesButton.setAttribute("aria-expanded", String(!propertiesCollapsed));
+  propertiesButton.setAttribute("aria-label", `${propertiesCollapsed ? "Expand" : "Collapse"} Visual settings panel`);
+}
+
+function toggleCanvasFocus() {
+  const focused = document.body.classList.toggle("canvas-focus");
+  const button = builderElements["builder-focus-canvas"];
+  button.textContent = focused ? "Exit focus" : "Focus canvas";
+  button.setAttribute("aria-pressed", String(focused));
+  resizeCanvasPlots();
+}
+
+function resizeCanvasPlots() {
+  window.setTimeout(() => {
+    if (!window.Plotly?.Plots) return;
+    document.querySelectorAll(".js-plotly-plot").forEach((plot) => window.Plotly.Plots.resize(plot));
+  }, 220);
 }
 
 async function builderApi(url, options = {}) {
@@ -118,14 +169,13 @@ async function loadBuilderDatasets() {
 
 async function changeDataset(event) {
   const datasetId = event.target.value;
-  if ((builderState.charts.length || builderState.filters.length) && builderState.dataset?.id !== datasetId) {
-    const confirmed = window.confirm("Changing the dataset will clear the visuals and global filters on this canvas. Continue?");
+  if (builderState.charts.length && builderState.dataset?.id !== datasetId) {
+    const confirmed = window.confirm("Changing the dataset will clear the visuals on this canvas. Continue?");
     if (!confirmed) {
       event.target.value = builderState.dataset?.id || "";
       return;
     }
     builderState.charts = [];
-    builderState.filters = [];
     builderState.editingDashboardId = null;
     resetVisualForm();
   }
@@ -146,32 +196,25 @@ async function loadBuilderDataset(datasetId) {
   const result = await builderApi(`/api/datasets/${datasetId}?limit=${builderLimits.chartRows}`);
   builderState.dataset = result.dataset;
   builderState.rows = result.rows;
-  builderState.filteredRows = result.rows;
   builderState.rowsTruncated = result.truncated;
   builderElements["builder-page-dataset"].value = datasetId;
   populateFieldSelects();
-  populateFilterColumns();
   renderFields();
   renderFieldProfile(null);
-  refreshFilteredRows();
-  renderFilterChips();
+  updateCanvasDescription();
   builderElements["builder-save-button"].disabled = builderState.charts.length === 0;
 }
 
 function clearBuilderDataset() {
   builderState.dataset = null;
   builderState.rows = [];
-  builderState.filteredRows = [];
-  builderState.filters = [];
   builderState.rowsTruncated = false;
   builderState.selectedField = null;
   builderElements["builder-field-count"].textContent = "0";
   builderElements["builder-field-list"].innerHTML = '<p class="rail-empty">Choose a dataset to inspect its fields.</p>';
   renderFieldProfile(null);
   populateFieldSelects();
-  populateFilterColumns();
-  refreshFilteredRows();
-  renderFilterChips();
+  updateCanvasDescription();
   renderVisuals();
 }
 
@@ -191,182 +234,14 @@ function populateFieldSelects() {
   if (columns.includes(previousY)) y.value = previousY;
 }
 
-function populateFilterColumns() {
-  const select = builderElements["builder-filter-column"];
-  const columns = builderState.dataset?.columns || [];
-  select.replaceChildren(new Option("Select a field", ""));
-  columns.forEach((column) => select.append(new Option(column, column)));
-  builderElements["builder-add-filter"].disabled = columns.length === 0;
-  populateCategoryFilterValues("");
-}
-
-function prepareFilterComposer() {
-  const column = builderElements["builder-filter-column"].value;
-  const type = builderState.dataset?.column_types[column];
-  if (type === "number") builderElements["builder-filter-mode"].value = "number";
-  else if (type === "date") builderElements["builder-filter-mode"].value = "date";
-  else builderElements["builder-filter-mode"].value = "category";
-  populateCategoryFilterValues(column);
-  updateFilterComposer();
-}
-
-function populateCategoryFilterValues(column) {
-  const select = builderElements["builder-filter-category"];
-  select.replaceChildren(new Option("Select a value", ""));
-  if (!column) return;
-  const values = [...new Set(
-    builderState.rows
-      .map((row) => row[column])
-      .filter((value) => !isMissingValue(value))
-      .map(String),
-  )].sort((first, second) => first.localeCompare(second, undefined, { numeric: true })).slice(0, 200);
-  values.forEach((value) => select.append(new Option(value, value)));
-}
-
-function updateFilterComposer() {
-  const mode = builderElements["builder-filter-mode"].value;
-  builderElements["builder-category-filter-field"].classList.toggle("hidden", mode !== "category");
-  builderElements["builder-number-filter-fields"].classList.toggle("hidden", mode !== "number");
-  builderElements["builder-date-filter-fields"].classList.toggle("hidden", mode !== "date");
-  builderElements["builder-missing-filter-field"].classList.toggle("hidden", mode !== "missing");
-}
-
-function addDashboardFilter() {
-  if (!builderState.dataset) return showBuilderToast("Choose a dataset first.", true);
-  if (builderState.filters.length >= 8) return showBuilderToast("A dashboard can contain up to 8 global filters.", true);
-  const column = builderElements["builder-filter-column"].value;
-  const mode = builderElements["builder-filter-mode"].value;
-  if (!column) return showBuilderToast("Select a field to filter.", true);
-  const filter = {
-    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-    column,
-    mode,
-  };
-  if (mode === "category") {
-    filter.value = builderElements["builder-filter-category"].value;
-    if (!filter.value) return showBuilderToast("Select a category value.", true);
-  } else if (mode === "number") {
-    const minimum = builderElements["builder-filter-minimum"].value;
-    const maximum = builderElements["builder-filter-maximum"].value;
-    if (minimum === "" && maximum === "") return showBuilderToast("Enter a minimum or maximum.", true);
-    filter.minimum = minimum === "" ? null : Number(minimum);
-    filter.maximum = maximum === "" ? null : Number(maximum);
-    if (filter.minimum !== null && filter.maximum !== null && filter.minimum > filter.maximum) {
-      return showBuilderToast("The minimum cannot exceed the maximum.", true);
-    }
-  } else if (mode === "date") {
-    filter.start = builderElements["builder-filter-start"].value || null;
-    filter.end = builderElements["builder-filter-end"].value || null;
-    if (!filter.start && !filter.end) return showBuilderToast("Choose a start or end date.", true);
-    if (filter.start && filter.end && filter.start > filter.end) {
-      return showBuilderToast("The start date cannot be after the end date.", true);
-    }
-  } else {
-    filter.behavior = builderElements["builder-filter-missing"].value;
-  }
-  builderState.filters.push(filter);
-  clearFilterComposerValues();
-  refreshFilteredRows();
-  renderFilterChips();
-  renderVisuals();
-  markUnsaved();
-}
-
-function clearFilterComposerValues() {
-  builderElements["builder-filter-category"].value = "";
-  builderElements["builder-filter-minimum"].value = "";
-  builderElements["builder-filter-maximum"].value = "";
-  builderElements["builder-filter-start"].value = "";
-  builderElements["builder-filter-end"].value = "";
-}
-
-function resetDashboardFilters() {
-  if (!builderState.filters.length) return;
-  builderState.filters = [];
-  refreshFilteredRows();
-  renderFilterChips();
-  renderVisuals();
-  markUnsaved();
-}
-
-function removeDashboardFilter(filterId) {
-  builderState.filters = builderState.filters.filter((filter) => filter.id !== filterId);
-  refreshFilteredRows();
-  renderFilterChips();
-  renderVisuals();
-  markUnsaved();
-}
-
-function renderFilterChips() {
-  const container = builderElements["builder-filter-chips"];
-  container.replaceChildren();
-  builderElements["builder-reset-filters"].disabled = builderState.filters.length === 0;
-  if (!builderState.filters.length) {
-    const empty = document.createElement("span");
-    empty.className = "filter-empty";
-    empty.textContent = "No filters applied.";
-    container.append(empty);
-    return;
-  }
-  builderState.filters.forEach((filter) => {
-    const chip = document.createElement("span");
-    chip.className = "filter-chip";
-    const label = document.createElement("span");
-    label.textContent = describeFilter(filter);
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.setAttribute("aria-label", `Remove ${filter.column} filter`);
-    remove.textContent = "×";
-    remove.addEventListener("click", () => removeDashboardFilter(filter.id));
-    chip.append(label, remove);
-    container.append(chip);
-  });
-}
-
-function describeFilter(filter) {
-  if (filter.mode === "category") return `${filter.column} = ${filter.value}`;
-  if (filter.mode === "number") return `${filter.column}: ${filter.minimum ?? "any"} to ${filter.maximum ?? "any"}`;
-  if (filter.mode === "date") return `${filter.column}: ${filter.start || "any"} to ${filter.end || "any"}`;
-  return `${filter.column}: ${filter.behavior === "only" ? "only missing" : "exclude missing"}`;
-}
-
-function refreshFilteredRows() {
-  builderState.filteredRows = builderState.filters.reduce(
-    (rows, filter) => rows.filter((row) => rowMatchesFilter(row, filter)),
-    builderState.rows,
-  );
-  const count = builderElements["builder-filtered-count"];
+function updateCanvasDescription() {
   if (!builderState.dataset) {
-    count.textContent = "No dataset selected";
     builderElements["builder-canvas-description"].textContent = "Select a dataset, then add your first visual.";
     return;
   }
-  count.textContent = `${builderState.filteredRows.length.toLocaleString()} of ${builderState.rows.length.toLocaleString()} rows`;
-  const sourceMessage = builderState.rowsTruncated
+  builderElements["builder-canvas-description"].textContent = builderState.rowsTruncated
     ? `Using the first ${builderLimits.chartRows.toLocaleString()} rows allowed by your plan.`
     : `${builderState.dataset.row_count.toLocaleString()} source rows.`;
-  builderElements["builder-canvas-description"].textContent = builderState.filters.length
-    ? `${builderState.filteredRows.length.toLocaleString()} rows match ${builderState.filters.length} global filter${builderState.filters.length === 1 ? "" : "s"}. ${sourceMessage}`
-    : sourceMessage;
-}
-
-function rowMatchesFilter(row, filter) {
-  const value = row[filter.column];
-  if (filter.mode === "missing") {
-    return filter.behavior === "only" ? isMissingValue(value) : !isMissingValue(value);
-  }
-  if (isMissingValue(value)) return false;
-  if (filter.mode === "category") return String(value) === filter.value;
-  if (filter.mode === "number") {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return false;
-    return (filter.minimum === null || numeric >= filter.minimum)
-      && (filter.maximum === null || numeric <= filter.maximum);
-  }
-  const parsed = parseDashboardDate(value);
-  if (!parsed) return false;
-  const dateValue = parsed.toISOString().slice(0, 10);
-  return (!filter.start || dateValue >= filter.start) && (!filter.end || dateValue <= filter.end);
 }
 
 function isMissingValue(value) {
@@ -521,7 +396,7 @@ function saveVisual() {
     }
   }
   if (dateGroup !== "none") {
-    const hasDate = builderState.filteredRows.some((row) => parseDashboardDate(row[x]));
+    const hasDate = builderState.rows.some((row) => parseDashboardDate(row[x]));
     if (!hasDate) return showBuilderToast("Date grouping requires a field containing valid dates.", true);
   }
   const chart = {
@@ -555,7 +430,24 @@ function renderVisuals() {
   if (!builderState.charts.length) {
     const empty = document.createElement("div");
     empty.className = "analysis-empty";
-    empty.innerHTML = "<span>⌁</span><h2>Build an analysis, not just a chart</h2><p>Add charts, KPI summaries, and data tables to this spacious canvas.</p>";
+    empty.innerHTML = "<span>⌁</span><h2>Build your first visual</h2><p>Select a dataset, then choose a chart, KPI, or table.</p>";
+    const actions = document.createElement("div");
+    actions.className = "analysis-empty-actions";
+    const datasetButton = smallButton("Select dataset", "Select a dataset", () => builderElements["builder-page-dataset"].focus());
+    datasetButton.className = "button secondary compact";
+    const visualButton = smallButton("Add visual", "Configure a visual", () => {
+      if (!builderState.dataset) {
+        builderElements["builder-page-dataset"].focus();
+        return showBuilderToast("Choose a dataset first.", true);
+      }
+      if (builderElements["builder-workbench"].classList.contains("properties-collapsed")) {
+        toggleBuilderPanel("properties");
+      }
+      builderElements["builder-x-column"].focus();
+    });
+    visualButton.className = "button primary compact";
+    actions.append(datasetButton, visualButton);
+    empty.append(actions);
     grid.append(empty);
     return;
   }
@@ -634,7 +526,7 @@ function renderPlot(card, chart) {
 }
 
 function buildBuilderTrace(chart) {
-  const validRows = builderState.filteredRows.filter((row) => !isMissingValue(row[chart.x]));
+  const validRows = builderState.rows.filter((row) => !isMissingValue(row[chart.x]));
   if (chart.type === "histogram") {
     return { type: "histogram", x: validRows.map((row) => row[chart.x]), marker: { color: "#6d5dfc" } };
   }
@@ -689,7 +581,7 @@ function renderKpi(card, chart) {
   label.textContent = chart.title;
   const value = document.createElement("strong");
   const field = chart.y || chart.x;
-  const values = builderState.filteredRows.map((row) => row[field]).filter((item) => !isMissingValue(item));
+  const values = builderState.rows.map((row) => row[field]).filter((item) => !isMissingValue(item));
   const numeric = values.map(Number).filter(Number.isFinite);
   let metric = values.length;
   if (chart.aggregation === "sum") metric = numeric.reduce((sum, item) => sum + item, 0);
@@ -717,7 +609,7 @@ function renderDataTable(card, chart) {
   });
   head.append(headingRow);
   const body = document.createElement("tbody");
-  builderState.filteredRows.slice(0, chart.top_n || 20).forEach((row) => {
+  builderState.rows.slice(0, chart.top_n || 20).forEach((row) => {
     const tableRow = document.createElement("tr");
     columns.forEach((column) => {
       const cell = document.createElement("td");
@@ -775,7 +667,7 @@ async function saveDashboard() {
     title,
     dataset_id: builderState.dataset.id,
     charts: builderState.charts,
-    filters: builderState.filters,
+    filters: [],
   };
   const updating = Boolean(builderState.editingDashboardId);
   try {
@@ -786,7 +678,6 @@ async function saveDashboard() {
     });
     builderState.editingDashboardId = result.dashboard.id;
     builderState.charts = result.dashboard.charts;
-    builderState.filters = result.dashboard.filters || [];
     window.history.replaceState({}, "", `/builder/${result.dashboard.id}`);
     await loadSavedDashboards();
     builderElements["builder-save-state"].textContent = "Saved just now";
@@ -835,11 +726,8 @@ async function openSavedDashboard(dashboardId, updateUrl = true) {
   const { dashboard } = await builderApi(`/api/dashboards/${dashboardId}`);
   builderState.editingDashboardId = dashboard.id;
   builderState.charts = dashboard.charts;
-  builderState.filters = dashboard.filters || [];
   builderElements["builder-dashboard-title"].value = dashboard.title;
   await loadBuilderDataset(dashboard.dataset_id);
-  refreshFilteredRows();
-  renderFilterChips();
   if (updateUrl) window.history.replaceState({}, "", `/builder/${dashboard.id}`);
   builderElements["builder-save-state"].textContent = `Saved ${formatBuilderDate(dashboard.updated_at)}`;
   renderVisuals();
@@ -860,12 +748,9 @@ async function deleteSavedDashboard(dashboard) {
 function newDashboard() {
   builderState.editingDashboardId = null;
   builderState.charts = [];
-  builderState.filters = [];
   builderElements["builder-dashboard-title"].value = "Untitled dashboard";
   builderElements["builder-save-state"].textContent = "Not saved";
   window.history.replaceState({}, "", "/builder");
-  refreshFilteredRows();
-  renderFilterChips();
   resetVisualForm();
 }
 
