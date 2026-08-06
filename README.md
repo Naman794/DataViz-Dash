@@ -43,7 +43,9 @@ then reopen, update, export, or delete them when needed.
 - Multi-chart dashboard creation and persistence
 - Dedicated full-screen builder with charts, KPI cards, data tables, and field profiles
 - Per-visual sorting, Top-N limits, editing, duplication, and responsive sizing
-- Collapsible builder panels and a distraction-free canvas focus mode
+- Graphite workspace with a compact view rail and contextual Data, Build, and Format inspector
+- Zoomable 16:9 dashboard page with grid, Fit page, Fit width, Actual size, and focus controls
+- Drag-to-reorder visuals with half-page and full-page width controls
 - Month, quarter, and year grouping for date-based visuals
 - Chart PNG, dashboard JSON, and print-ready PDF exports
 - Anonymous browser-isolated workspaces
