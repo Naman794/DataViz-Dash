@@ -9,6 +9,10 @@ const builderState = {
   selectedChartId: null,
   selectedField: null,
   visualType: "bar",
+  canvasZoom: 1,
+  canvasViewMode: "fit-page",
+  gridVisible: true,
+  inspectorTab: "build",
 };
 
 const builderLimits = {
@@ -32,8 +36,13 @@ function cacheBuilderElements() {
     "builder-save-button", "builder-field-count", "builder-field-search",
     "builder-field-list", "builder-field-profile", "builder-saved-count",
     "builder-saved-list", "builder-canvas-description", "builder-visual-count",
-    "builder-workbench", "builder-toggle-fields", "builder-toggle-properties",
-    "builder-focus-canvas",
+    "builder-workbench", "builder-toggle-properties", "builder-focus-canvas",
+    "builder-view-canvas", "builder-view-data", "builder-view-saved",
+    "builder-saved-drawer", "builder-close-saved", "builder-inspector-tabs",
+    "builder-toggle-grid", "builder-fit-page", "builder-fit-width",
+    "builder-actual-size", "builder-zoom-out", "builder-zoom-in",
+    "builder-zoom-label", "builder-canvas-viewport", "builder-page-shell",
+    "builder-dashboard-page",
     "builder-analysis-grid", "builder-properties-title", "builder-visual-types",
     "builder-visual-title", "builder-x-label", "builder-x-column",
     "builder-date-group-field", "builder-date-group",
@@ -47,9 +56,22 @@ function cacheBuilderElements() {
 function bindBuilderEvents() {
   builderElements["builder-page-dataset"].addEventListener("change", changeDataset);
   builderElements["builder-field-search"].addEventListener("input", renderFields);
-  builderElements["builder-toggle-fields"].addEventListener("click", () => toggleBuilderPanel("fields"));
-  builderElements["builder-toggle-properties"].addEventListener("click", () => toggleBuilderPanel("properties"));
+  builderElements["builder-toggle-properties"].addEventListener("click", toggleBuilderPanel);
   builderElements["builder-focus-canvas"].addEventListener("click", toggleCanvasFocus);
+  document.querySelectorAll("[data-builder-view]").forEach((button) => {
+    button.addEventListener("click", () => handleBuilderView(button.dataset.builderView));
+  });
+  builderElements["builder-close-saved"].addEventListener("click", closeSavedDrawer);
+  builderElements["builder-inspector-tabs"].addEventListener("click", (event) => {
+    const button = event.target.closest("[data-inspector-tab]");
+    if (button) switchInspectorTab(button.dataset.inspectorTab);
+  });
+  builderElements["builder-toggle-grid"].addEventListener("click", () => setGridVisible(!builderState.gridVisible));
+  builderElements["builder-fit-page"].addEventListener("click", () => fitCanvas("fit-page"));
+  builderElements["builder-fit-width"].addEventListener("click", () => fitCanvas("fit-width"));
+  builderElements["builder-actual-size"].addEventListener("click", () => setCanvasZoom(1, "actual"));
+  builderElements["builder-zoom-out"].addEventListener("click", () => adjustCanvasZoom(-.1));
+  builderElements["builder-zoom-in"].addEventListener("click", () => adjustCanvasZoom(.1));
   builderElements["builder-visual-types"].addEventListener("click", (event) => {
     const button = event.target.closest("[data-visual-type]");
     if (button) setVisualType(button.dataset.visualType);
@@ -64,8 +86,13 @@ function bindBuilderEvents() {
   });
   builderElements["builder-dashboard-title"].addEventListener("input", markUnsaved);
   restoreBuilderLayout();
+  window.addEventListener("resize", () => {
+    if (["fit-page", "fit-width"].includes(builderState.canvasViewMode)) fitCanvas(builderState.canvasViewMode);
+  });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && document.body.classList.contains("canvas-focus")) toggleCanvasFocus();
+    if (event.key !== "Escape") return;
+    if (builderElements["builder-saved-drawer"].classList.contains("open")) closeSavedDrawer();
+    else if (document.body.classList.contains("canvas-focus")) toggleCanvasFocus();
   });
 }
 
@@ -76,37 +103,115 @@ function restoreBuilderLayout() {
   } catch (error) {
     layout = {};
   }
-  builderElements["builder-workbench"].classList.toggle("fields-collapsed", Boolean(layout.fieldsCollapsed));
   builderElements["builder-workbench"].classList.toggle("properties-collapsed", Boolean(layout.propertiesCollapsed));
+  builderState.inspectorTab = layout.inspectorTab || "build";
+  builderState.gridVisible = layout.gridVisible !== false;
   updateBuilderLayoutControls();
+  switchInspectorTab(builderState.inspectorTab, false);
+  setGridVisible(builderState.gridVisible, false);
+  window.requestAnimationFrame(() => fitCanvas("fit-page"));
 }
 
-function toggleBuilderPanel(panel) {
-  builderElements["builder-workbench"].classList.toggle(`${panel}-collapsed`);
+function saveBuilderLayout() {
   const layout = {
-    fieldsCollapsed: builderElements["builder-workbench"].classList.contains("fields-collapsed"),
     propertiesCollapsed: builderElements["builder-workbench"].classList.contains("properties-collapsed"),
+    inspectorTab: builderState.inspectorTab,
+    gridVisible: builderState.gridVisible,
   };
   try {
     sessionStorage.setItem("dataviz-builder-layout", JSON.stringify(layout));
   } catch (error) {
     // The layout still works when browser storage is unavailable.
   }
+}
+
+function toggleBuilderPanel() {
+  builderElements["builder-workbench"].classList.toggle("properties-collapsed");
+  saveBuilderLayout();
   updateBuilderLayoutControls();
   resizeCanvasPlots();
+  window.setTimeout(() => fitCanvas(builderState.canvasViewMode), 220);
 }
 
 function updateBuilderLayoutControls() {
-  const fieldsCollapsed = builderElements["builder-workbench"].classList.contains("fields-collapsed");
   const propertiesCollapsed = builderElements["builder-workbench"].classList.contains("properties-collapsed");
-  const fieldsButton = builderElements["builder-toggle-fields"];
   const propertiesButton = builderElements["builder-toggle-properties"];
-  fieldsButton.textContent = fieldsCollapsed ? "›" : "‹";
-  fieldsButton.setAttribute("aria-expanded", String(!fieldsCollapsed));
-  fieldsButton.setAttribute("aria-label", `${fieldsCollapsed ? "Expand" : "Collapse"} Fields panel`);
   propertiesButton.textContent = propertiesCollapsed ? "‹" : "›";
   propertiesButton.setAttribute("aria-expanded", String(!propertiesCollapsed));
-  propertiesButton.setAttribute("aria-label", `${propertiesCollapsed ? "Expand" : "Collapse"} Visual settings panel`);
+  propertiesButton.setAttribute("aria-label", `${propertiesCollapsed ? "Expand" : "Collapse"} inspector`);
+}
+
+function handleBuilderView(view) {
+  document.querySelectorAll("[data-builder-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.builderView === view);
+  });
+  if (view === "saved") {
+    builderElements["builder-saved-drawer"].classList.add("open");
+    builderElements["builder-saved-drawer"].setAttribute("aria-hidden", "false");
+    return;
+  }
+  closeSavedDrawer(false);
+  if (view === "data") {
+    if (builderElements["builder-workbench"].classList.contains("properties-collapsed")) toggleBuilderPanel();
+    switchInspectorTab("data");
+  } else if (view === "canvas") {
+    switchInspectorTab("build");
+  }
+}
+
+function closeSavedDrawer(resetView = true) {
+  builderElements["builder-saved-drawer"].classList.remove("open");
+  builderElements["builder-saved-drawer"].setAttribute("aria-hidden", "true");
+  if (resetView) handleBuilderView("canvas");
+}
+
+function switchInspectorTab(tab, persist = true) {
+  builderState.inspectorTab = tab;
+  document.querySelectorAll("[data-inspector-tab]").forEach((button) => {
+    const active = button.dataset.inspectorTab === tab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-inspector-panel]").forEach((panel) => {
+    const active = panel.dataset.inspectorPanel === tab;
+    panel.classList.toggle("active", active);
+    panel.hidden = !active;
+  });
+  if (persist) saveBuilderLayout();
+}
+
+function setGridVisible(visible, persist = true) {
+  builderState.gridVisible = visible;
+  builderElements["builder-dashboard-page"].classList.toggle("show-grid", visible);
+  builderElements["builder-toggle-grid"].setAttribute("aria-pressed", String(visible));
+  if (persist) saveBuilderLayout();
+}
+
+function fitCanvas(mode) {
+  const viewport = builderElements["builder-canvas-viewport"];
+  if (!viewport.clientWidth || !viewport.clientHeight) return;
+  const widthScale = Math.max(.35, (viewport.clientWidth - 56) / 1280);
+  const heightScale = Math.max(.35, (viewport.clientHeight - 56) / 720);
+  setCanvasZoom(mode === "fit-width" ? widthScale : Math.min(widthScale, heightScale), mode);
+}
+
+function adjustCanvasZoom(delta) {
+  setCanvasZoom(builderState.canvasZoom + delta, "custom");
+}
+
+function setCanvasZoom(value, mode = "custom") {
+  builderState.canvasZoom = Math.min(1.5, Math.max(.35, Math.round(value * 20) / 20));
+  builderState.canvasViewMode = mode;
+  builderElements["builder-page-shell"].style.setProperty("--canvas-scale", builderState.canvasZoom);
+  builderElements["builder-zoom-label"].textContent = `${Math.round(builderState.canvasZoom * 100)}%`;
+  syncPageShellSize();
+  resizeCanvasPlots();
+}
+
+function syncPageShellSize() {
+  const pageHeight = Math.max(720, builderElements["builder-dashboard-page"].scrollHeight);
+  builderElements["builder-page-shell"].style.width = `${1280 * builderState.canvasZoom}px`;
+  builderElements["builder-page-shell"].style.height = `${pageHeight * builderState.canvasZoom}px`;
 }
 
 function toggleCanvasFocus() {
@@ -115,6 +220,7 @@ function toggleCanvasFocus() {
   button.textContent = focused ? "Exit focus" : "Focus canvas";
   button.setAttribute("aria-pressed", String(focused));
   resizeCanvasPlots();
+  window.setTimeout(() => fitCanvas("fit-page"), 30);
 }
 
 function resizeCanvasPlots() {
@@ -441,19 +547,41 @@ function renderVisuals() {
         return showBuilderToast("Choose a dataset first.", true);
       }
       if (builderElements["builder-workbench"].classList.contains("properties-collapsed")) {
-        toggleBuilderPanel("properties");
+        toggleBuilderPanel();
       }
+      switchInspectorTab("build");
       builderElements["builder-x-column"].focus();
     });
     visualButton.className = "button primary compact";
     actions.append(datasetButton, visualButton);
     empty.append(actions);
     grid.append(empty);
+    window.requestAnimationFrame(syncPageShellSize);
     return;
   }
   builderState.charts.forEach((chart) => {
     const card = document.createElement("article");
     card.className = `analysis-card ${chart.size || "half"}${builderState.selectedChartId === chart.id ? " selected" : ""}`;
+    card.dataset.chartId = chart.id;
+    card.addEventListener("dragstart", (event) => {
+      card.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", chart.id);
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      document.querySelectorAll(".analysis-card").forEach((item) => item.classList.remove("drop-target"));
+    });
+    card.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      card.classList.add("drop-target");
+    });
+    card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
+    card.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const source = document.querySelector(".analysis-card.dragging");
+      if (source && source.dataset.chartId !== chart.id) reorderVisuals(source.dataset.chartId, chart.id);
+    });
     card.addEventListener("click", (event) => {
       if (!event.target.closest("button")) editVisual(chart.id);
     });
@@ -463,12 +591,17 @@ function renderVisuals() {
     else renderPlot(card, chart);
     grid.append(card);
   });
+  window.requestAnimationFrame(syncPageShellSize);
 }
 
 function makeVisualToolbar(chart) {
   const toolbar = document.createElement("div");
   toolbar.className = "visual-toolbar";
+  const drag = smallButton("⋮⋮", "Drag to reorder", () => {});
+  drag.draggable = true;
+  drag.className = "visual-drag-handle";
   const edit = smallButton("✎", "Edit visual", () => editVisual(chart.id));
+  const resize = smallButton("↔", `Make visual ${chart.size === "full" ? "half" : "full"} width`, () => toggleVisualWidth(chart.id));
   const duplicate = smallButton("⧉", "Duplicate visual", () => duplicateVisual(chart));
   const remove = smallButton("×", "Remove visual", () => {
     builderState.charts = builderState.charts.filter((item) => item.id !== chart.id);
@@ -476,8 +609,26 @@ function makeVisualToolbar(chart) {
     renderVisuals();
     markUnsaved();
   });
-  toolbar.append(edit, duplicate, remove);
+  toolbar.append(drag, edit, resize, duplicate, remove);
   return toolbar;
+}
+
+function reorderVisuals(sourceId, targetId) {
+  const sourceIndex = builderState.charts.findIndex((chart) => chart.id === sourceId);
+  const targetIndex = builderState.charts.findIndex((chart) => chart.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return;
+  const [chart] = builderState.charts.splice(sourceIndex, 1);
+  builderState.charts.splice(targetIndex, 0, chart);
+  renderVisuals();
+  markUnsaved();
+}
+
+function toggleVisualWidth(chartId) {
+  builderState.charts = builderState.charts.map((chart) => (
+    chart.id === chartId ? { ...chart, size: chart.size === "full" ? "half" : "full" } : chart
+  ));
+  renderVisuals();
+  markUnsaved();
 }
 
 function smallButton(label, title, handler) {
@@ -509,14 +660,14 @@ function renderPlot(card, chart) {
   }
   const trace = buildBuilderTrace(chart);
   Plotly.react(plot, [trace], {
-    title: { text: chart.title, font: { family: "Manrope", size: 16, color: "#17213a" }, x: .04 },
-    margin: { t: 62, r: 28, b: 62, l: 62 },
+    title: { text: chart.title, font: { family: "Manrope", size: 16, color: "#111315" }, x: .04 },
+    margin: { t: 58, r: 24, b: 54, l: 56 },
     paper_bgcolor: "#fff",
     plot_bgcolor: "#fff",
-    colorway: ["#6d5dfc", "#1ab8a6", "#f4a261", "#df4f64", "#3b82f6"],
-    xaxis: { gridcolor: "#edf0f5", automargin: true },
-    yaxis: { gridcolor: "#edf0f5", automargin: true },
-    font: { family: "DM Sans", color: "#5e6780" },
+    colorway: ["#0f766e", "#111315", "#d99132", "#39738c", "#8a5a44"],
+    xaxis: { gridcolor: "#e8ece9", automargin: true },
+    yaxis: { gridcolor: "#e8ece9", automargin: true },
+    font: { family: "DM Sans", color: "#667078" },
     showlegend: chart.type === "pie",
   }, {
     responsive: true,
@@ -528,7 +679,7 @@ function renderPlot(card, chart) {
 function buildBuilderTrace(chart) {
   const validRows = builderState.rows.filter((row) => !isMissingValue(row[chart.x]));
   if (chart.type === "histogram") {
-    return { type: "histogram", x: validRows.map((row) => row[chart.x]), marker: { color: "#6d5dfc" } };
+    return { type: "histogram", x: validRows.map((row) => row[chart.x]), marker: { color: "#0f766e" } };
   }
   let points;
   const grouped = chart.aggregation !== "none" || (chart.date_group || "none") !== "none" || (!chart.y && ["bar", "line", "area", "pie"].includes(chart.type));
@@ -558,10 +709,10 @@ function buildBuilderTrace(chart) {
   const x = points.map((point) => point.x);
   const y = points.map((point) => point.y);
   if (chart.type === "pie") return { type: "pie", labels: x, values: y, hole: .38 };
-  if (chart.type === "scatter") return { type: "scatter", mode: "markers", x, y, marker: { color: "#6d5dfc", size: 8, opacity: .75 } };
-  if (chart.type === "area") return { type: "scatter", mode: "lines", fill: "tozeroy", x, y, line: { color: "#6d5dfc", width: 3 } };
-  if (chart.type === "line") return { type: "scatter", mode: "lines+markers", x, y, line: { color: "#6d5dfc", width: 3 } };
-  return { type: "bar", x, y, marker: { color: "#6d5dfc" } };
+  if (chart.type === "scatter") return { type: "scatter", mode: "markers", x, y, marker: { color: "#0f766e", size: 8, opacity: .78 } };
+  if (chart.type === "area") return { type: "scatter", mode: "lines", fill: "tozeroy", x, y, line: { color: "#0f766e", width: 3 } };
+  if (chart.type === "line") return { type: "scatter", mode: "lines+markers", x, y, line: { color: "#0f766e", width: 3 } };
+  return { type: "bar", x, y, marker: { color: "#0f766e" } };
 }
 
 function aggregateValues(group, aggregation) {
@@ -627,6 +778,8 @@ function editVisual(chartId) {
   const chart = builderState.charts.find((item) => item.id === chartId);
   if (!chart) return;
   builderState.selectedChartId = chart.id;
+  if (builderElements["builder-workbench"].classList.contains("properties-collapsed")) toggleBuilderPanel();
+  switchInspectorTab("build");
   setVisualType(chart.type);
   builderElements["builder-visual-title"].value = chart.title;
   builderElements["builder-x-column"].value = chart.x;

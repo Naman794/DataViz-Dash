@@ -54,88 +54,112 @@
     </section>
 
     <div class="builder-workbench" id="builder-workbench">
-      <aside class="builder-rail fields-rail">
-        <button class="rail-toggle" id="builder-toggle-fields" type="button" aria-label="Collapse Fields panel" aria-expanded="true" title="Collapse Fields panel">‹</button>
-        <section>
-          <div class="rail-heading"><div><span class="rail-kicker">DATA</span><h2>Fields</h2></div><span id="builder-field-count">0</span></div>
-          <input class="rail-search" id="builder-field-search" type="search" placeholder="Search columns" aria-label="Search dataset columns">
-          <div class="field-list" id="builder-field-list"><p class="rail-empty">Choose a dataset to inspect its fields.</p></div>
-        </section>
+      <nav class="builder-view-rail" aria-label="Builder views">
+        <button class="active" id="builder-view-canvas" type="button" data-builder-view="canvas" title="Canvas"><span>▣</span><small>Canvas</small></button>
+        <button id="builder-view-data" type="button" data-builder-view="data" title="Data fields"><span>⌗</span><small>Data</small></button>
+        <button id="builder-view-saved" type="button" data-builder-view="saved" title="Saved dashboards"><span>▤</span><small>Saved</small></button>
+      </nav>
 
-        <section class="field-profile" id="builder-field-profile">
-          <div class="rail-heading"><div><span class="rail-kicker">PROFILE</span><h2>Field summary</h2></div></div>
-          <p class="rail-empty">Select a field to see its quality and statistics.</p>
-        </section>
-
-        <section id="saved-dashboards">
-          <div class="rail-heading"><div><span class="rail-kicker">RECENT</span><h2>Saved dashboards</h2></div><span id="builder-saved-count">0</span></div>
-          <div class="builder-saved-list" id="builder-saved-list"><p class="rail-empty">No saved dashboards yet.</p></div>
-        </section>
+      <aside class="builder-saved-drawer" id="builder-saved-drawer" aria-hidden="true">
+        <button class="drawer-close" id="builder-close-saved" type="button" aria-label="Close saved dashboards">×</button>
+        <div class="rail-heading"><div><span class="rail-kicker">LIBRARY</span><h2>Saved dashboards</h2></div><span id="builder-saved-count">0</span></div>
+        <p class="drawer-description">Open, continue, or remove a dashboard without shrinking your canvas.</p>
+        <div class="builder-saved-list" id="builder-saved-list"><p class="rail-empty">No saved dashboards yet.</p></div>
       </aside>
 
       <section class="analysis-canvas">
         <div class="canvas-heading">
-          <div><h1>Dashboard canvas</h1><p id="builder-canvas-description">Select a dataset, then add your first visual.</p></div>
-          <div class="canvas-heading-actions">
-            <span id="builder-visual-count">0 visuals</span>
-            <button class="canvas-focus-button" id="builder-focus-canvas" type="button" aria-pressed="false">Focus canvas</button>
+          <div><h1>Dashboard page</h1><p id="builder-canvas-description">Select a dataset, then add your first visual.</p></div>
+          <span class="visual-count" id="builder-visual-count">0 visuals</span>
+        </div>
+
+        <div class="canvas-toolbar" role="toolbar" aria-label="Canvas controls">
+          <div class="canvas-toolbar-group">
+            <button id="builder-toggle-grid" type="button" aria-pressed="true" title="Show or hide grid">Grid</button>
+            <span class="canvas-size-label">16:9 · 1280 × 720</span>
+          </div>
+          <div class="canvas-toolbar-group">
+            <button id="builder-fit-page" type="button">Fit page</button>
+            <button id="builder-fit-width" type="button">Fit width</button>
+            <button id="builder-actual-size" type="button">100%</button>
+            <button id="builder-zoom-out" type="button" aria-label="Zoom out">−</button>
+            <span class="zoom-label" id="builder-zoom-label">100%</span>
+            <button id="builder-zoom-in" type="button" aria-label="Zoom in">＋</button>
+            <button class="canvas-focus-button" id="builder-focus-canvas" type="button" aria-pressed="false">Focus</button>
           </div>
         </div>
-        <div class="analysis-grid" id="builder-analysis-grid">
-          <div class="analysis-empty">
-            <span>⌁</span>
-            <h2>Build your first visual</h2>
-            <p>Select a dataset, then choose a chart, KPI, or table.</p>
+
+        <div class="canvas-viewport" id="builder-canvas-viewport">
+          <div class="dashboard-page-shell" id="builder-page-shell">
+            <div class="dashboard-page show-grid" id="builder-dashboard-page">
+              <div class="analysis-grid" id="builder-analysis-grid">
+                <div class="analysis-empty">
+                  <span>⌁</span>
+                  <h2>Build your first visual</h2>
+                  <p>Select a dataset, then choose a chart, KPI, or table.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <aside class="builder-rail properties-rail">
-        <button class="rail-toggle" id="builder-toggle-properties" type="button" aria-label="Collapse Visual settings panel" aria-expanded="true" title="Collapse Visual settings panel">›</button>
-        <div class="rail-heading"><div><span class="rail-kicker">VISUAL</span><h2 id="builder-properties-title">Add a visual</h2></div></div>
-        <div class="visual-type-grid" id="builder-visual-types" role="group" aria-label="Visual type">
-          <button class="active" type="button" data-visual-type="bar">▥<span>Bar</span></button>
-          <button type="button" data-visual-type="line">⌁<span>Line</span></button>
-          <button type="button" data-visual-type="area">◒<span>Area</span></button>
-          <button type="button" data-visual-type="pie">◔<span>Pie</span></button>
-          <button type="button" data-visual-type="scatter">⠿<span>Scatter</span></button>
-          <button type="button" data-visual-type="histogram">▥<span>Histogram</span></button>
-          <button type="button" data-visual-type="kpi">123<span>KPI</span></button>
-          <button type="button" data-visual-type="table">▦<span>Table</span></button>
+      <aside class="builder-inspector properties-rail">
+        <button class="rail-toggle" id="builder-toggle-properties" type="button" aria-label="Collapse inspector" aria-expanded="true" title="Collapse inspector">›</button>
+        <div class="inspector-heading"><span class="rail-kicker">INSPECTOR</span><h2 id="builder-properties-title">Add a visual</h2></div>
+        <div class="inspector-tabs" id="builder-inspector-tabs" role="tablist" aria-label="Inspector sections">
+          <button type="button" data-inspector-tab="data" role="tab" aria-selected="false">Data</button>
+          <button class="active" type="button" data-inspector-tab="build" role="tab" aria-selected="true">Build</button>
+          <button type="button" data-inspector-tab="format" role="tab" aria-selected="false">Format</button>
         </div>
 
-        <div class="property-form">
-          <label class="field"><span>Visual title</span><input id="builder-visual-title" maxlength="100" placeholder="Revenue by region"></label>
-          <label class="field"><span id="builder-x-label">Category / X-axis</span><select id="builder-x-column"><option value="">Select a field</option></select></label>
-          <label class="field" id="builder-date-group-field"><span>Date grouping</span><select id="builder-date-group"><option value="none">No grouping</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option></select></label>
-          <label class="field" id="builder-y-field"><span>Value / Y-axis</span><select id="builder-y-column"><option value="">Count records</option></select></label>
-          <label class="field" id="builder-aggregation-field"><span>Aggregation</span><select id="builder-aggregation">
-            <option value="count">Count</option>
-            <option value="sum">Sum</option>
-            <option value="average">Average</option>
-            <option value="minimum">Minimum</option>
-            <option value="maximum">Maximum</option>
-            <option value="none">No aggregation</option>
-          </select></label>
-          <div class="property-row">
-            <label class="field" id="builder-sort-field"><span>Sort values</span><select id="builder-sort">
-              <option value="default">Dataset order</option>
-              <option value="descending">Highest first</option>
-              <option value="ascending">Lowest first</option>
-            </select></label>
-            <label class="field" id="builder-top-field"><span>Limit results</span><select id="builder-top-n">
-              <option value="0">Show all</option>
-              <option value="5">Top 5</option>
-              <option value="10">Top 10</option>
-              <option value="20">Top 20</option>
+        <section class="inspector-panel" data-inspector-panel="data" hidden>
+          <div class="rail-heading"><div><span class="rail-kicker">FIELDS</span><h3>Dataset fields</h3></div><span id="builder-field-count">0</span></div>
+          <input class="rail-search" id="builder-field-search" type="search" placeholder="Search columns" aria-label="Search dataset columns">
+          <div class="field-list" id="builder-field-list"><p class="rail-empty">Choose a dataset to inspect its fields.</p></div>
+          <div class="field-profile" id="builder-field-profile">
+            <div class="rail-heading"><div><span class="rail-kicker">PROFILE</span><h3>Field summary</h3></div></div>
+            <p class="rail-empty">Select a field to see its quality and statistics.</p>
+          </div>
+        </section>
+
+        <section class="inspector-panel active" data-inspector-panel="build">
+          <div class="visual-type-grid" id="builder-visual-types" role="group" aria-label="Visual type">
+            <button class="active" type="button" data-visual-type="bar">▥<span>Bar</span></button>
+            <button type="button" data-visual-type="line">⌁<span>Line</span></button>
+            <button type="button" data-visual-type="area">◒<span>Area</span></button>
+            <button type="button" data-visual-type="pie">◔<span>Pie</span></button>
+            <button type="button" data-visual-type="scatter">⠿<span>Scatter</span></button>
+            <button type="button" data-visual-type="histogram">▥<span>Histogram</span></button>
+            <button type="button" data-visual-type="kpi">123<span>KPI</span></button>
+            <button type="button" data-visual-type="table">▦<span>Table</span></button>
+          </div>
+          <div class="property-form">
+            <label class="field"><span>Visual title</span><input id="builder-visual-title" maxlength="100" placeholder="Revenue by region"></label>
+            <label class="field"><span id="builder-x-label">Category / X-axis</span><select id="builder-x-column"><option value="">Select a field</option></select></label>
+            <label class="field" id="builder-date-group-field"><span>Date grouping</span><select id="builder-date-group"><option value="none">No grouping</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option></select></label>
+            <label class="field" id="builder-y-field"><span>Value / Y-axis</span><select id="builder-y-column"><option value="">Count records</option></select></label>
+            <label class="field" id="builder-aggregation-field"><span>Aggregation</span><select id="builder-aggregation">
+              <option value="count">Count</option><option value="sum">Sum</option><option value="average">Average</option><option value="minimum">Minimum</option><option value="maximum">Maximum</option><option value="none">No aggregation</option>
             </select></label>
           </div>
-          <label class="field"><span>Canvas width</span><select id="builder-visual-size"><option value="half">Half width</option><option value="full">Full width</option></select></label>
+        </section>
+
+        <section class="inspector-panel" data-inspector-panel="format" hidden>
+          <div class="property-form">
+            <div class="property-row">
+              <label class="field" id="builder-sort-field"><span>Sort values</span><select id="builder-sort"><option value="default">Dataset order</option><option value="descending">Highest first</option><option value="ascending">Lowest first</option></select></label>
+              <label class="field" id="builder-top-field"><span>Limit results</span><select id="builder-top-n"><option value="0">Show all</option><option value="5">Top 5</option><option value="10">Top 10</option><option value="20">Top 20</option></select></label>
+            </div>
+            <label class="field"><span>Visual width</span><select id="builder-visual-size"><option value="half">Half page</option><option value="full">Full page</option></select></label>
+          </div>
+          <div class="builder-tip"><strong>Layout tip</strong><p>Drag cards to reorder them. Use the width control or the resize action on a card to switch between half and full page.</p></div>
+        </section>
+
+        <div class="inspector-actions">
           <button class="button primary full" id="builder-add-visual" type="button">＋ Add visual</button>
           <button class="button tertiary full hidden" id="builder-cancel-edit" type="button">Cancel editing</button>
         </div>
-
-        <div class="builder-tip"><strong>Analysis tip</strong><p>KPI cards summarize a measure. Tables help verify the exact records behind a chart.</p></div>
       </aside>
     </div>
   </main>

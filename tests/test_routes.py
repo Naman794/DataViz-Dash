@@ -46,13 +46,18 @@ def test_workspace_page_loads(client):
 def test_dedicated_builder_page_and_saved_dashboard_route(client):
     builder = client.get("/builder")
     assert builder.status_code == 200
-    assert b"Dashboard canvas" in builder.data
+    assert b"Dashboard page" in builder.data
     assert b"KPI" in builder.data
     assert b"Table" in builder.data
     assert b"Dashboard filters" not in builder.data
-    assert b'id="builder-toggle-fields"' in builder.data
+    assert b'id="builder-view-canvas"' in builder.data
+    assert b'id="builder-view-data"' in builder.data
+    assert b'id="builder-view-saved"' in builder.data
     assert b'id="builder-toggle-properties"' in builder.data
     assert b'id="builder-focus-canvas"' in builder.data
+    assert b'id="builder-fit-page"' in builder.data
+    assert b'id="builder-fit-width"' in builder.data
+    assert b'id="builder-toggle-grid"' in builder.data
     assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
 
