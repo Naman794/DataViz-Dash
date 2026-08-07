@@ -18,7 +18,9 @@ def upload_dataset(client):
         content_type="multipart/form-data",
     )
     assert response.status_code == 201
-    return response.get_json()["dataset"]
+    dataset = response.get_json()["dataset"]
+    assert dataset["name"] == "sales.csv"
+    return dataset
 
 
 def test_landing_page_loads(client):
@@ -39,6 +41,7 @@ def test_workspace_page_loads(client):
     assert response.status_code == 200
     assert b"Upload, preview and clean" in response.data
     assert b"maximum 10 MB and 100 rows" in response.data
+    assert b"original filename kept automatically" in response.data
     assert b'href="/"' in response.data
     assert b'href="/builder"' in response.data
 
@@ -58,6 +61,9 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b'id="builder-fit-page"' in builder.data
     assert b'id="builder-fit-width"' in builder.data
     assert b'id="builder-toggle-grid"' in builder.data
+    assert b'id="builder-page-tabs"' in builder.data
+    assert b'id="builder-undo"' in builder.data
+    assert b'id="builder-redo"' in builder.data
     assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
 
@@ -188,6 +194,69 @@ def test_legacy_dashboard_payload_defaults_to_no_filters(client):
     assert response.status_code == 201
     assert response.get_json()["dashboard"]["filters"] == []
     assert response.get_json()["dashboard"]["charts"][0]["date_group"] == "none"
+    assert response.get_json()["dashboard"]["pages"][0]["title"] == "Page 1"
+    assert response.get_json()["dashboard"]["active_page_id"] == "page-1"
+
+
+def test_dashboard_persists_pages_and_grid_layout(client):
+    dataset = upload_dataset(client)
+    chart = {
+        "title": "Sales",
+        "type": "bar",
+        "x": "Region",
+        "y": "Sales",
+        "aggregation": "sum",
+    }
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Paged analysis",
+            "dataset_id": dataset["id"],
+            "charts": [chart, chart],
+            "pages": [
+                {
+                    "id": "overview",
+                    "title": "Overview",
+                    "charts": [
+                        {
+                            **chart,
+                            "id": "overview-chart",
+                            "layout": {"x": 0, "y": 0, "w": 12, "h": 8},
+                        }
+                    ],
+                },
+                {
+                    "id": "detail",
+                    "title": "Detail",
+                    "charts": [
+                        {
+                            **chart,
+                            "id": "detail-chart",
+                            "layout": {"x": 8, "y": 4, "w": 6, "h": 99},
+                        }
+                    ],
+                },
+            ],
+            "active_page_id": "detail",
+        },
+    )
+
+    assert response.status_code == 201
+    dashboard = response.get_json()["dashboard"]
+    assert [page["title"] for page in dashboard["pages"]] == ["Overview", "Detail"]
+    assert dashboard["active_page_id"] == "detail"
+    assert dashboard["pages"][0]["charts"][0]["layout"] == {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8,
+    }
+    assert dashboard["pages"][1]["charts"][0]["layout"] == {
+        "x": 6,
+        "y": 4,
+        "w": 6,
+        "h": 16,
+    }
 
 
 def test_dashboard_persists_date_grouping_for_supported_charts(client):
