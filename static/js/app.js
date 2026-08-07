@@ -151,13 +151,22 @@ async function selectDataset(datasetId) {
     clearDatasetWorkspace();
     return;
   }
+  const selected = state.datasets.find((dataset) => dataset.id === datasetId);
+  elements["dataset-select"].disabled = true;
+  elements["dataset-workspace"].setAttribute("aria-busy", "true");
+  elements["page-title"].textContent = selected ? `Loading ${selected.name}…` : "Loading dataset…";
   try {
     const result = await api(`/api/datasets/${datasetId}?limit=100`);
     state.currentDataset = result.dataset;
     state.rows = result.rows;
     renderDatasetWorkspace();
+    elements["page-title"].textContent = result.dataset.name;
   } catch (error) {
+    elements["page-title"].textContent = "Prepare your data";
     showToast(error.message, true);
+  } finally {
+    elements["dataset-select"].disabled = false;
+    elements["dataset-workspace"].removeAttribute("aria-busy");
   }
 }
 
