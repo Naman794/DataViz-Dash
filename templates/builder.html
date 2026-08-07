@@ -79,6 +79,8 @@
             <span class="canvas-size-label">16:9 · 1280 × 720</span>
           </div>
           <div class="canvas-toolbar-group">
+            <button id="builder-undo" type="button" disabled title="Undo layout change">Undo</button>
+            <button id="builder-redo" type="button" disabled title="Redo layout change">Redo</button>
             <button id="builder-fit-page" type="button">Fit page</button>
             <button id="builder-fit-width" type="button">Fit width</button>
             <button id="builder-actual-size" type="button">100%</button>
@@ -102,6 +104,7 @@
             </div>
           </div>
         </div>
+        <nav class="dashboard-tabs" id="builder-page-tabs" aria-label="Dashboard pages"></nav>
       </section>
 
       <aside class="builder-inspector properties-rail">

@@ -40,6 +40,7 @@ CHART_TYPES = {
 AGGREGATIONS = {"none", "sum", "average", "count", "minimum", "maximum"}
 FILTER_MODES = {"category", "number", "date", "missing"}
 MAX_DASHBOARD_FILTERS = 8
+MAX_DASHBOARD_PAGES = 20
 
 
 @bp.before_app_request
@@ -372,8 +373,38 @@ def validate_dashboard_payload(raw_payload):
     payload = raw_payload or {}
     title = str(payload.get("title", "")).strip()
     dataset_id = str(payload.get("dataset_id", "")).strip()
-    charts = payload.get("charts")
+    raw_charts = payload.get("charts")
+    raw_pages = payload.get("pages")
     filters = payload.get("filters", [])
+    page_specs = []
+
+    if raw_pages is None:
+        charts = raw_charts
+        page_specs = [
+            {
+                "id": "page-1",
+                "title": "Page 1",
+                "count": len(charts) if isinstance(charts, list) else 0,
+            }
+        ]
+    else:
+        if not isinstance(raw_pages, list) or not 1 <= len(raw_pages) <= MAX_DASHBOARD_PAGES:
+            return None, f"A dashboard must contain between 1 and {MAX_DASHBOARD_PAGES} pages."
+        charts = []
+        seen_page_ids = set()
+        for index, page in enumerate(raw_pages):
+            if not isinstance(page, dict):
+                return None, "Every dashboard page must be a valid object."
+            page_charts = page.get("charts", [])
+            if not isinstance(page_charts, list):
+                return None, "Every dashboard page must contain a chart list."
+            page_id = str(page.get("id") or f"page-{index + 1}")[:100]
+            if page_id in seen_page_ids:
+                return None, "Dashboard page IDs must be unique."
+            seen_page_ids.add(page_id)
+            page_title = str(page.get("title") or f"Page {index + 1}").strip()[:50]
+            page_specs.append({"id": page_id, "title": page_title, "count": len(page_charts)})
+            charts.extend(page_charts)
 
     if not title or len(title) > 100:
         return None, "Dashboard title must contain 1 to 100 characters."
@@ -422,6 +453,28 @@ def validate_dashboard_payload(raw_payload):
             date_group = "none"
         if date_group != "none" and chart_type not in {"area", "bar", "line", "pie"}:
             return None, "Date grouping is not supported for this visual type."
+        raw_layout = chart.get("layout") if isinstance(chart.get("layout"), dict) else {}
+        default_width = 12 if chart.get("size") == "full" else 6
+        width = raw_layout.get("w", default_width)
+        height = raw_layout.get("h", 7)
+        x_position = raw_layout.get("x", 0)
+        y_position = raw_layout.get("y", 0)
+        width = width if isinstance(width, int) and not isinstance(width, bool) else default_width
+        height = height if isinstance(height, int) and not isinstance(height, bool) else 7
+        x_position = (
+            x_position
+            if isinstance(x_position, int) and not isinstance(x_position, bool)
+            else 0
+        )
+        y_position = (
+            y_position
+            if isinstance(y_position, int) and not isinstance(y_position, bool)
+            else 0
+        )
+        width = min(12, max(3, width))
+        height = min(16, max(4, height))
+        x_position = min(12 - width, max(0, x_position))
+        y_position = max(0, y_position)
         validated_charts.append(
             {
                 "id": str(chart.get("id") or secrets.token_hex(6)),
@@ -444,13 +497,36 @@ def validate_dashboard_payload(raw_payload):
                 and chart.get("size") in {"half", "full"}
                 else "half",
                 "date_group": date_group,
+                "layout": {
+                    "x": x_position,
+                    "y": y_position,
+                    "w": width,
+                    "h": height,
+                },
             }
         )
+
+    validated_pages = []
+    offset = 0
+    for page in page_specs:
+        page_charts = validated_charts[offset : offset + page["count"]]
+        offset += page["count"]
+        validated_pages.append(
+            {"id": page["id"], "title": page["title"], "charts": page_charts}
+        )
+    requested_active_page = str(payload.get("active_page_id") or "")
+    active_page_id = (
+        requested_active_page
+        if any(page["id"] == requested_active_page for page in validated_pages)
+        else validated_pages[0]["id"]
+    )
 
     return {
         "title": title,
         "dataset_id": dataset_id,
         "charts": validated_charts,
+        "pages": validated_pages,
+        "active_page_id": active_page_id,
         "filters": validated_filters,
     }, None
 
