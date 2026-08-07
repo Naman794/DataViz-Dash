@@ -5,6 +5,10 @@ const builderState = {
   rows: [],
   rowsTruncated: false,
   charts: [],
+  pages: [{ id: "page-1", title: "Page 1", charts: [] }],
+  activePageId: "page-1",
+  layoutHistory: [],
+  layoutFuture: [],
   editingDashboardId: document.body.dataset.initialDashboardId || null,
   selectedChartId: null,
   selectedField: null,
@@ -26,6 +30,7 @@ const builderElements = {};
 document.addEventListener("DOMContentLoaded", () => {
   cacheBuilderElements();
   bindBuilderEvents();
+  renderPageTabs();
   refreshBuilder();
 });
 
@@ -39,10 +44,10 @@ function cacheBuilderElements() {
     "builder-workbench", "builder-toggle-properties", "builder-focus-canvas",
     "builder-view-canvas", "builder-view-data", "builder-view-saved",
     "builder-saved-drawer", "builder-close-saved", "builder-inspector-tabs",
-    "builder-toggle-grid", "builder-fit-page", "builder-fit-width",
+    "builder-toggle-grid", "builder-undo", "builder-redo", "builder-fit-page", "builder-fit-width",
     "builder-actual-size", "builder-zoom-out", "builder-zoom-in",
     "builder-zoom-label", "builder-canvas-viewport", "builder-page-shell",
-    "builder-dashboard-page",
+    "builder-dashboard-page", "builder-page-tabs",
     "builder-analysis-grid", "builder-properties-title", "builder-visual-types",
     "builder-visual-title", "builder-x-label", "builder-x-column",
     "builder-date-group-field", "builder-date-group",
@@ -67,6 +72,8 @@ function bindBuilderEvents() {
     if (button) switchInspectorTab(button.dataset.inspectorTab);
   });
   builderElements["builder-toggle-grid"].addEventListener("click", () => setGridVisible(!builderState.gridVisible));
+  builderElements["builder-undo"].addEventListener("click", undoLayout);
+  builderElements["builder-redo"].addEventListener("click", redoLayout);
   builderElements["builder-fit-page"].addEventListener("click", () => fitCanvas("fit-page"));
   builderElements["builder-fit-width"].addEventListener("click", () => fitCanvas("fit-width"));
   builderElements["builder-actual-size"].addEventListener("click", () => setCanvasZoom(1, "actual"));
@@ -90,10 +97,104 @@ function bindBuilderEvents() {
     if (["fit-page", "fit-width"].includes(builderState.canvasViewMode)) fitCanvas(builderState.canvasViewMode);
   });
   document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      return event.shiftKey ? redoLayout() : undoLayout();
+    }
     if (event.key !== "Escape") return;
     if (builderElements["builder-saved-drawer"].classList.contains("open")) closeSavedDrawer();
     else if (document.body.classList.contains("canvas-focus")) toggleCanvasFocus();
   });
+}
+
+function makeBuilderId(prefix) {
+  const value = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  return `${prefix}-${value}`;
+}
+
+function activePage() {
+  return builderState.pages.find((page) => page.id === builderState.activePageId) || builderState.pages[0];
+}
+
+function setCharts(charts) {
+  builderState.charts = charts;
+  const page = activePage();
+  if (page) page.charts = charts;
+}
+
+function totalVisuals() {
+  return builderState.pages.reduce((total, page) => total + page.charts.length, 0);
+}
+
+function normaliseLayout(chart, index = 0) {
+  const rawWidth = Number(chart.layout?.w);
+  const rawHeight = Number(chart.layout?.h);
+  const rawX = Number(chart.layout?.x);
+  const rawY = Number(chart.layout?.y);
+  const width = Math.min(12, Math.max(3, Number.isFinite(rawWidth) && rawWidth ? rawWidth : (chart.size === "full" ? 12 : 6)));
+  const height = Math.min(16, Math.max(4, Number.isFinite(rawHeight) && rawHeight ? rawHeight : 7));
+  return {
+    ...chart,
+    size: width >= 12 ? "full" : "half",
+    layout: {
+      x: Math.min(12 - width, Math.max(0, Number.isFinite(rawX) ? rawX : ((index % 2) * 6))),
+      y: Math.max(0, Number.isFinite(rawY) ? rawY : (Math.floor(index / 2) * 7)),
+      w: width,
+      h: height,
+    },
+  };
+}
+
+function normalisePages(dashboard = {}) {
+  const source = Array.isArray(dashboard.pages) && dashboard.pages.length
+    ? dashboard.pages
+    : [{ id: "page-1", title: "Page 1", charts: dashboard.charts || [] }];
+  return source.map((page, pageIndex) => ({
+    id: String(page.id || `page-${pageIndex + 1}`),
+    title: String(page.title || `Page ${pageIndex + 1}`).slice(0, 50),
+    charts: (Array.isArray(page.charts) ? page.charts : []).map(normaliseLayout),
+  }));
+}
+
+function snapshotLayout() {
+  return JSON.stringify({ pages: builderState.pages, activePageId: builderState.activePageId });
+}
+
+function recordLayoutHistory() {
+  builderState.layoutHistory.push(snapshotLayout());
+  if (builderState.layoutHistory.length > 30) builderState.layoutHistory.shift();
+  builderState.layoutFuture = [];
+  updateHistoryButtons();
+}
+
+function restoreLayoutSnapshot(snapshot) {
+  const value = JSON.parse(snapshot);
+  builderState.pages = value.pages;
+  builderState.activePageId = value.activePageId;
+  setCharts(activePage()?.charts || []);
+  resetVisualForm();
+  renderPageTabs();
+  renderVisuals();
+  markUnsaved();
+}
+
+function undoLayout() {
+  if (!builderState.layoutHistory.length) return;
+  builderState.layoutFuture.push(snapshotLayout());
+  restoreLayoutSnapshot(builderState.layoutHistory.pop());
+  updateHistoryButtons();
+}
+
+function redoLayout() {
+  if (!builderState.layoutFuture.length) return;
+  builderState.layoutHistory.push(snapshotLayout());
+  restoreLayoutSnapshot(builderState.layoutFuture.pop());
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  builderElements["builder-undo"].disabled = builderState.layoutHistory.length === 0;
+  builderElements["builder-redo"].disabled = builderState.layoutFuture.length === 0;
 }
 
 function restoreBuilderLayout() {
@@ -275,15 +376,18 @@ async function loadBuilderDatasets() {
 
 async function changeDataset(event) {
   const datasetId = event.target.value;
-  if (builderState.charts.length && builderState.dataset?.id !== datasetId) {
+  if (totalVisuals() && builderState.dataset?.id !== datasetId) {
     const confirmed = window.confirm("Changing the dataset will clear the visuals on this canvas. Continue?");
     if (!confirmed) {
       event.target.value = builderState.dataset?.id || "";
       return;
     }
-    builderState.charts = [];
+    builderState.pages = [{ id: "page-1", title: "Page 1", charts: [] }];
+    builderState.activePageId = "page-1";
+    setCharts(builderState.pages[0].charts);
     builderState.editingDashboardId = null;
     resetVisualForm();
+    renderPageTabs();
   }
   if (!datasetId) {
     clearBuilderDataset();
@@ -308,7 +412,7 @@ async function loadBuilderDataset(datasetId) {
   renderFields();
   renderFieldProfile(null);
   updateCanvasDescription();
-  builderElements["builder-save-button"].disabled = builderState.charts.length === 0;
+  builderElements["builder-save-button"].disabled = totalVisuals() === 0;
 }
 
 function clearBuilderDataset() {
@@ -348,6 +452,60 @@ function updateCanvasDescription() {
   builderElements["builder-canvas-description"].textContent = builderState.rowsTruncated
     ? `Using the first ${builderLimits.chartRows.toLocaleString()} rows allowed by your plan.`
     : `${builderState.dataset.row_count.toLocaleString()} source rows.`;
+}
+
+function renderPageTabs() {
+  const container = builderElements["builder-page-tabs"];
+  container.replaceChildren();
+  builderState.pages.forEach((page) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `dashboard-tab${page.id === builderState.activePageId ? " active" : ""}`;
+    button.title = "Click to open · double-click to rename";
+    const label = document.createElement("span");
+    label.textContent = page.title;
+    const count = document.createElement("small");
+    count.textContent = page.charts.length;
+    button.append(label, count);
+    button.addEventListener("click", () => switchPage(page.id));
+    button.addEventListener("dblclick", () => renamePage(page.id));
+    container.append(button);
+  });
+  const add = smallButton("＋", "Add dashboard page", addPage);
+  add.className = "dashboard-tab-add";
+  container.append(add);
+}
+
+function switchPage(pageId) {
+  if (pageId === builderState.activePageId) return;
+  builderState.activePageId = pageId;
+  setCharts(activePage()?.charts || []);
+  resetVisualForm();
+  renderPageTabs();
+  renderVisuals();
+  window.requestAnimationFrame(() => fitCanvas(builderState.canvasViewMode));
+}
+
+function addPage() {
+  recordLayoutHistory();
+  const page = { id: makeBuilderId("page"), title: `Page ${builderState.pages.length + 1}`, charts: [] };
+  builderState.pages.push(page);
+  builderState.activePageId = page.id;
+  setCharts(page.charts);
+  resetVisualForm();
+  renderPageTabs();
+  markUnsaved();
+}
+
+function renamePage(pageId) {
+  const page = builderState.pages.find((item) => item.id === pageId);
+  if (!page) return;
+  const title = window.prompt("Page name", page.title)?.trim();
+  if (!title || title === page.title) return;
+  recordLayoutHistory();
+  page.title = title.slice(0, 50);
+  renderPageTabs();
+  markUnsaved();
 }
 
 function isMissingValue(value) {
@@ -482,10 +640,28 @@ function setVisualType(type) {
   }
 }
 
+function layoutsOverlap(first, second) {
+  return first.x < second.x + second.w && first.x + first.w > second.x
+    && first.y < second.y + second.h && first.y + first.h > second.y;
+}
+
+function findAvailableLayout(width = 6, height = 7, ignoreId = null) {
+  const occupied = builderState.charts
+    .filter((chart) => chart.id !== ignoreId)
+    .map((chart, index) => normaliseLayout(chart, index).layout);
+  for (let y = 0; y < 200; y += 1) {
+    for (let x = 0; x <= 12 - width; x += 1) {
+      const candidate = { x, y, w: width, h: height };
+      if (!occupied.some((layout) => layoutsOverlap(candidate, layout))) return candidate;
+    }
+  }
+  return { x: 0, y: occupied.reduce((bottom, item) => Math.max(bottom, item.y + item.h), 0), w: width, h: height };
+}
+
 function saveVisual() {
   if (!builderState.dataset) return showBuilderToast("Choose a prepared dataset first.", true);
   const editing = builderState.charts.find((chart) => chart.id === builderState.selectedChartId);
-  if (!editing && builderState.charts.length >= builderLimits.maxCharts) {
+  if (!editing && totalVisuals() >= builderLimits.maxCharts) {
     return showBuilderToast(`Your plan supports up to ${builderLimits.maxCharts} visuals.`, true);
   }
   const type = builderState.visualType;
@@ -505,6 +681,8 @@ function saveVisual() {
     const hasDate = builderState.rows.some((row) => parseDashboardDate(row[x]));
     if (!hasDate) return showBuilderToast("Date grouping requires a field containing valid dates.", true);
   }
+  recordLayoutHistory();
+  const requestedWidth = builderElements["builder-visual-size"].value === "full" ? 12 : 6;
   const chart = {
     id: editing?.id || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
     title: builderElements["builder-visual-title"].value.trim() || defaultVisualTitle(type, x),
@@ -514,16 +692,20 @@ function saveVisual() {
     aggregation,
     sort: builderElements["builder-sort"].value,
     top_n: Number(builderElements["builder-top-n"].value),
-    size: builderElements["builder-visual-size"].value,
+    size: requestedWidth === 12 ? "full" : "half",
+    layout: editing?.layout?.w === requestedWidth
+      ? editing.layout
+      : findAvailableLayout(requestedWidth, editing?.layout?.h || 7, editing?.id),
     date_group: dateGroup,
   };
   if (editing) {
-    builderState.charts = builderState.charts.map((item) => item.id === chart.id ? chart : item);
+    setCharts(builderState.charts.map((item) => item.id === chart.id ? chart : item));
   } else {
     builderState.charts.push(chart);
   }
   resetVisualForm();
   renderVisuals();
+  renderPageTabs();
   markUnsaved();
 }
 
@@ -531,8 +713,8 @@ function renderVisuals() {
   const grid = builderElements["builder-analysis-grid"];
   grid.replaceChildren();
   builderElements["builder-visual-count"].textContent = `${builderState.charts.length} visual${builderState.charts.length === 1 ? "" : "s"}`;
-  builderElements["builder-save-button"].disabled = !builderState.dataset || builderState.charts.length === 0;
-  builderElements["builder-print-button"].disabled = builderState.charts.length === 0;
+  builderElements["builder-save-button"].disabled = !builderState.dataset || totalVisuals() === 0;
+  builderElements["builder-print-button"].disabled = totalVisuals() === 0;
   if (!builderState.charts.length) {
     const empty = document.createElement("div");
     empty.className = "analysis-empty";
@@ -559,54 +741,133 @@ function renderVisuals() {
     window.requestAnimationFrame(syncPageShellSize);
     return;
   }
-  builderState.charts.forEach((chart) => {
+  builderState.charts.forEach((chart, index) => {
+    chart.layout = normaliseLayout(chart, index).layout;
     const card = document.createElement("article");
     card.className = `analysis-card ${chart.size || "half"}${builderState.selectedChartId === chart.id ? " selected" : ""}`;
     card.dataset.chartId = chart.id;
-    card.addEventListener("dragstart", (event) => {
-      card.classList.add("dragging");
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", chart.id);
-    });
-    card.addEventListener("dragend", () => {
-      card.classList.remove("dragging");
-      document.querySelectorAll(".analysis-card").forEach((item) => item.classList.remove("drop-target"));
-    });
-    card.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      card.classList.add("drop-target");
-    });
-    card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
-    card.addEventListener("drop", (event) => {
-      event.preventDefault();
-      const source = document.querySelector(".analysis-card.dragging");
-      if (source && source.dataset.chartId !== chart.id) reorderVisuals(source.dataset.chartId, chart.id);
-    });
+    applyCardLayout(card, chart.layout);
     card.addEventListener("click", (event) => {
       if (!event.target.closest("button")) editVisual(chart.id);
     });
-    card.append(makeVisualToolbar(chart));
+    const toolbar = makeVisualToolbar(chart);
+    card.append(toolbar);
+    bindCardLayoutInteraction(card, chart, toolbar.querySelector(".visual-drag-handle"));
     if (chart.type === "kpi") renderKpi(card, chart);
     else if (chart.type === "table") renderDataTable(card, chart);
     else renderPlot(card, chart);
+    const resizeHandle = document.createElement("button");
+    resizeHandle.type = "button";
+    resizeHandle.className = "visual-resize-handle";
+    resizeHandle.title = "Resize visual";
+    resizeHandle.setAttribute("aria-label", "Resize visual");
+    card.append(resizeHandle);
+    bindCardResize(card, chart, resizeHandle);
     grid.append(card);
   });
   window.requestAnimationFrame(syncPageShellSize);
+}
+
+function applyCardLayout(card, layout) {
+  card.style.gridColumn = `${layout.x + 1} / span ${layout.w}`;
+  card.style.gridRow = `${layout.y + 1} / span ${layout.h}`;
+}
+
+function gridPointerMetrics() {
+  const grid = builderElements["builder-analysis-grid"];
+  const columnStride = (grid.clientWidth - 64 + 8) / 12;
+  return { columnStride: columnStride * builderState.canvasZoom, rowStride: 40 * builderState.canvasZoom };
+}
+
+function layoutCollides(candidate, chartId) {
+  return builderState.charts.some((item, index) => (
+    item.id !== chartId && layoutsOverlap(candidate, normaliseLayout(item, index).layout)
+  ));
+}
+
+function bindCardLayoutInteraction(card, chart, handle) {
+  handle.draggable = false;
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const start = { x: event.clientX, y: event.clientY, layout: { ...chart.layout } };
+    const metrics = gridPointerMetrics();
+    recordLayoutHistory();
+    card.classList.add("dragging");
+    handle.setPointerCapture(event.pointerId);
+    const move = (moveEvent) => {
+      const candidate = {
+        ...start.layout,
+        x: Math.min(12 - start.layout.w, Math.max(0, start.layout.x + Math.round((moveEvent.clientX - start.x) / metrics.columnStride))),
+        y: Math.max(0, start.layout.y + Math.round((moveEvent.clientY - start.y) / metrics.rowStride)),
+      };
+      chart.layout = candidate;
+      applyCardLayout(card, candidate);
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      card.classList.remove("dragging");
+      if (layoutCollides(chart.layout, chart.id)) chart.layout = start.layout;
+      applyCardLayout(card, chart.layout);
+      renderVisuals();
+      markUnsaved();
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  });
+}
+
+function bindCardResize(card, chart, handle) {
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const start = { x: event.clientX, y: event.clientY, layout: { ...chart.layout } };
+    const metrics = gridPointerMetrics();
+    recordLayoutHistory();
+    handle.setPointerCapture(event.pointerId);
+    const move = (moveEvent) => {
+      const candidate = {
+        ...start.layout,
+        w: Math.min(12 - start.layout.x, Math.max(3, start.layout.w + Math.round((moveEvent.clientX - start.x) / metrics.columnStride))),
+        h: Math.min(16, Math.max(4, start.layout.h + Math.round((moveEvent.clientY - start.y) / metrics.rowStride))),
+      };
+      chart.layout = candidate;
+      chart.size = candidate.w >= 12 ? "full" : "half";
+      applyCardLayout(card, candidate);
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      if (layoutCollides(chart.layout, chart.id)) chart.layout = start.layout;
+      chart.size = chart.layout.w >= 12 ? "full" : "half";
+      renderVisuals();
+      markUnsaved();
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  });
 }
 
 function makeVisualToolbar(chart) {
   const toolbar = document.createElement("div");
   toolbar.className = "visual-toolbar";
   const drag = smallButton("⋮⋮", "Drag to reorder", () => {});
-  drag.draggable = true;
+  drag.draggable = false;
   drag.className = "visual-drag-handle";
   const edit = smallButton("✎", "Edit visual", () => editVisual(chart.id));
   const resize = smallButton("↔", `Make visual ${chart.size === "full" ? "half" : "full"} width`, () => toggleVisualWidth(chart.id));
   const duplicate = smallButton("⧉", "Duplicate visual", () => duplicateVisual(chart));
   const remove = smallButton("×", "Remove visual", () => {
-    builderState.charts = builderState.charts.filter((item) => item.id !== chart.id);
+    recordLayoutHistory();
+    setCharts(builderState.charts.filter((item) => item.id !== chart.id));
     if (builderState.selectedChartId === chart.id) resetVisualForm();
     renderVisuals();
+    renderPageTabs();
     markUnsaved();
   });
   toolbar.append(drag, edit, resize, duplicate, remove);
@@ -617,6 +878,7 @@ function reorderVisuals(sourceId, targetId) {
   const sourceIndex = builderState.charts.findIndex((chart) => chart.id === sourceId);
   const targetIndex = builderState.charts.findIndex((chart) => chart.id === targetId);
   if (sourceIndex < 0 || targetIndex < 0) return;
+  recordLayoutHistory();
   const [chart] = builderState.charts.splice(sourceIndex, 1);
   builderState.charts.splice(targetIndex, 0, chart);
   renderVisuals();
@@ -624,9 +886,17 @@ function reorderVisuals(sourceId, targetId) {
 }
 
 function toggleVisualWidth(chartId) {
-  builderState.charts = builderState.charts.map((chart) => (
-    chart.id === chartId ? { ...chart, size: chart.size === "full" ? "half" : "full" } : chart
-  ));
+  const chart = builderState.charts.find((item) => item.id === chartId);
+  if (!chart) return;
+  recordLayoutHistory();
+  const width = chart.layout?.w >= 12 ? 6 : 12;
+  const candidate = { ...(chart.layout || findAvailableLayout(width, 7, chart.id)), x: width === 12 ? 0 : Math.min(chart.layout?.x || 0, 6), w: width };
+  if (layoutCollides(candidate, chart.id)) {
+    chart.layout = findAvailableLayout(width, candidate.h, chart.id);
+  } else {
+    chart.layout = candidate;
+  }
+  chart.size = width === 12 ? "full" : "half";
   renderVisuals();
   markUnsaved();
 }
@@ -642,11 +912,18 @@ function smallButton(label, title, handler) {
 }
 
 function duplicateVisual(chart) {
-  if (builderState.charts.length >= builderLimits.maxCharts) {
+  if (totalVisuals() >= builderLimits.maxCharts) {
     return showBuilderToast(`Your plan supports up to ${builderLimits.maxCharts} visuals.`, true);
   }
-  builderState.charts.push({ ...chart, id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, title: `${chart.title} copy` });
+  recordLayoutHistory();
+  builderState.charts.push({
+    ...chart,
+    id: makeBuilderId("visual"),
+    title: `${chart.title} copy`,
+    layout: findAvailableLayout(chart.layout?.w || 6, chart.layout?.h || 7),
+  });
   renderVisuals();
+  renderPageTabs();
   markUnsaved();
 }
 
@@ -815,11 +1092,13 @@ function resetVisualForm() {
 async function saveDashboard() {
   const title = builderElements["builder-dashboard-title"].value.trim();
   if (!title) return showBuilderToast("Enter a dashboard title.", true);
-  if (!builderState.dataset || !builderState.charts.length) return showBuilderToast("Add at least one visual before saving.", true);
+  if (!builderState.dataset || !totalVisuals()) return showBuilderToast("Add at least one visual before saving.", true);
   const payload = {
     title,
     dataset_id: builderState.dataset.id,
-    charts: builderState.charts,
+    charts: builderState.pages.flatMap((page) => page.charts),
+    pages: builderState.pages,
+    active_page_id: builderState.activePageId,
     filters: [],
   };
   const updating = Boolean(builderState.editingDashboardId);
@@ -830,11 +1109,14 @@ async function saveDashboard() {
       body: JSON.stringify(payload),
     });
     builderState.editingDashboardId = result.dashboard.id;
-    builderState.charts = result.dashboard.charts;
+    builderState.pages = normalisePages(result.dashboard);
+    builderState.activePageId = result.dashboard.active_page_id || builderState.pages[0].id;
+    setCharts(activePage()?.charts || []);
     window.history.replaceState({}, "", `/builder/${result.dashboard.id}`);
     await loadSavedDashboards();
     builderElements["builder-save-state"].textContent = "Saved just now";
     showBuilderToast(updating ? "Dashboard updated." : "Dashboard saved.");
+    renderPageTabs();
     renderVisuals();
   } catch (error) {
     showBuilderToast(error.message, true);
@@ -862,7 +1144,11 @@ async function loadSavedDashboards() {
     link.href = `/builder/${dashboard.id}`;
     link.textContent = dashboard.title;
     const meta = document.createElement("small");
-    meta.textContent = `${dashboard.charts.length} visuals · ${formatBuilderDate(dashboard.updated_at)}`;
+    const visualCount = dashboard.pages?.length
+      ? dashboard.pages.reduce((total, page) => total + (page.charts?.length || 0), 0)
+      : dashboard.charts.length;
+    const pageCount = dashboard.pages?.length || 1;
+    meta.textContent = `${visualCount} visuals · ${pageCount} page${pageCount === 1 ? "" : "s"} · ${formatBuilderDate(dashboard.updated_at)}`;
     details.append(link, meta);
     const remove = document.createElement("button");
     remove.type = "button";
@@ -878,11 +1164,19 @@ async function loadSavedDashboards() {
 async function openSavedDashboard(dashboardId, updateUrl = true) {
   const { dashboard } = await builderApi(`/api/dashboards/${dashboardId}`);
   builderState.editingDashboardId = dashboard.id;
-  builderState.charts = dashboard.charts;
+  builderState.pages = normalisePages(dashboard);
+  builderState.activePageId = builderState.pages.some((page) => page.id === dashboard.active_page_id)
+    ? dashboard.active_page_id
+    : builderState.pages[0].id;
+  setCharts(activePage()?.charts || []);
   builderElements["builder-dashboard-title"].value = dashboard.title;
   await loadBuilderDataset(dashboard.dataset_id);
   if (updateUrl) window.history.replaceState({}, "", `/builder/${dashboard.id}`);
   builderElements["builder-save-state"].textContent = `Saved ${formatBuilderDate(dashboard.updated_at)}`;
+  builderState.layoutHistory = [];
+  builderState.layoutFuture = [];
+  updateHistoryButtons();
+  renderPageTabs();
   renderVisuals();
 }
 
@@ -900,10 +1194,16 @@ async function deleteSavedDashboard(dashboard) {
 
 function newDashboard() {
   builderState.editingDashboardId = null;
-  builderState.charts = [];
+  builderState.pages = [{ id: "page-1", title: "Page 1", charts: [] }];
+  builderState.activePageId = "page-1";
+  setCharts(builderState.pages[0].charts);
+  builderState.layoutHistory = [];
+  builderState.layoutFuture = [];
   builderElements["builder-dashboard-title"].value = "Untitled dashboard";
   builderElements["builder-save-state"].textContent = "Not saved";
   window.history.replaceState({}, "", "/builder");
+  updateHistoryButtons();
+  renderPageTabs();
   resetVisualForm();
 }
 
