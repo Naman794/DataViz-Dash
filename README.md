@@ -45,7 +45,10 @@ then reopen, update, export, or delete them when needed.
 - Per-visual sorting, Top-N limits, editing, duplication, and responsive sizing
 - Graphite workspace with a compact view rail and contextual Data, Build, and Format inspector
 - Zoomable 16:9 dashboard page with grid, Fit page, Fit width, Actual size, and focus controls
-- Drag-to-reorder visuals with half-page and full-page width controls
+- Sheet-style dashboard page tabs for broader multi-view analyses
+- Drag-and-resize visual placement on a persisted 12-column snap grid
+- Undo and redo for page and layout changes
+- Instant dataset switching while retaining each uploaded file's original name
 - Month, quarter, and year grouping for date-based visuals
 - Chart PNG, dashboard JSON, and print-ready PDF exports
 - Anonymous browser-isolated workspaces
