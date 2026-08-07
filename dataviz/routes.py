@@ -380,7 +380,13 @@ def validate_dashboard_payload(raw_payload):
 
     if raw_pages is None:
         charts = raw_charts
-        page_specs = [{"id": "page-1", "title": "Page 1", "count": len(charts) if isinstance(charts, list) else 0}]
+        page_specs = [
+            {
+                "id": "page-1",
+                "title": "Page 1",
+                "count": len(charts) if isinstance(charts, list) else 0,
+            }
+        ]
     else:
         if not isinstance(raw_pages, list) or not 1 <= len(raw_pages) <= MAX_DASHBOARD_PAGES:
             return None, f"A dashboard must contain between 1 and {MAX_DASHBOARD_PAGES} pages."
@@ -455,8 +461,16 @@ def validate_dashboard_payload(raw_payload):
         y_position = raw_layout.get("y", 0)
         width = width if isinstance(width, int) and not isinstance(width, bool) else default_width
         height = height if isinstance(height, int) and not isinstance(height, bool) else 7
-        x_position = x_position if isinstance(x_position, int) and not isinstance(x_position, bool) else 0
-        y_position = y_position if isinstance(y_position, int) and not isinstance(y_position, bool) else 0
+        x_position = (
+            x_position
+            if isinstance(x_position, int) and not isinstance(x_position, bool)
+            else 0
+        )
+        y_position = (
+            y_position
+            if isinstance(y_position, int) and not isinstance(y_position, bool)
+            else 0
+        )
         width = min(12, max(3, width))
         height = min(16, max(4, height))
         x_position = min(12 - width, max(0, x_position))
