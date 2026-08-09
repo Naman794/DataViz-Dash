@@ -16,6 +16,8 @@ def resolve_plan(user=None) -> dict:
             "max_dashboards": current_app.config["PRO_DASHBOARD_LIMIT"],
             "max_charts": current_app.config["PRO_CHART_LIMIT"],
             "chart_row_limit": current_app.config["CHART_ROW_LIMIT"],
+            "max_storage_mb": current_app.config["PRO_STORAGE_MB"],
+            "max_pages": current_app.config["PRO_PAGE_LIMIT"],
             "dashboard_exports": True,
         }
 
@@ -37,5 +39,7 @@ def resolve_plan(user=None) -> dict:
             current_app.config["FREE_CHART_ROW_LIMIT"],
             current_app.config["CHART_ROW_LIMIT"],
         ),
+        "max_storage_mb": current_app.config["FREE_STORAGE_MB"],
+        "max_pages": current_app.config["FREE_PAGE_LIMIT"],
         "dashboard_exports": False,
     }

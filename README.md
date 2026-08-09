@@ -68,12 +68,14 @@ then reopen, update, export, or delete them when needed.
 
 | Capability | Free | Pro preview |
 | --- | ---: | ---: |
-| Maximum upload | 10 MB | 50 MB |
-| Rows per dataset | 10,000 | 50,000 |
+| Maximum upload | 50 MB | 100 MB |
+| Rows per dataset | 100,000 | 100,000 |
+| Total uploaded data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
-| Charts per dashboard | 4 | 8 |
-| Chart data processed | 10,000 rows | 50,000 rows |
+| Visuals per dashboard | 4 | 12 |
+| Pages per dashboard | 3 | 20 |
+| Chart data processed | 50,000 rows | 100,000 rows |
 | Basic data cleaning | Included | Included |
 | Cleaned CSV and chart PNG | Included | Included |
 | Dashboard JSON and print / PDF | Upgrade required | Included |
@@ -106,7 +108,7 @@ enabled yet.
 
 DataViz Dash is under active development. Version `V 0.1` established the
 working data-cleaning and dashboard MVP. The current development branch adds
-larger dataset capacity, accounts, Free/Pro entitlements, and a staged paywall.
+100,000-row capacity, account storage entitlements, and a staged paywall.
 
 See the [V 0.1 release](https://github.com/Naman794/DataViz-Dash/releases/tag/v0.1)
 and the [freemium product plan](docs/FREEMIUM_PLAN.md).

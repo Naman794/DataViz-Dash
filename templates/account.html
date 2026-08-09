@@ -36,6 +36,7 @@
           <div><span>Plan</span><strong>{{ account_plan.label }}</strong></div>
           <div><span>Datasets</span><strong>{{ usage.datasets }} / {{ account_plan.max_datasets }}</strong></div>
           <div><span>Dashboards</span><strong>{{ usage.dashboards }} / {{ account_plan.max_dashboards }}</strong></div>
+          <div><span>Uploaded data</span><strong>{{ (usage.source_size_bytes / 1048576)|round(1) }} MB / {% if account_plan.max_storage_mb >= 1024 %}{{ account_plan.max_storage_mb // 1024 }} GB{% else %}{{ account_plan.max_storage_mb }} MB{% endif %}</strong></div>
         </div>
         <div class="account-actions">
           <a class="button primary" href="{{ url_for('main.index') }}">Open workspace</a>

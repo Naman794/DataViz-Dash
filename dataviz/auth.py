@@ -108,6 +108,7 @@ def account():
         usage = {
             "datasets": repository.count_datasets(user_id),
             "dashboards": repository.count_dashboards(user_id),
+            "source_size_bytes": repository.total_source_bytes(user_id),
         }
     return render_template("account.html", user=user, usage=usage)
 

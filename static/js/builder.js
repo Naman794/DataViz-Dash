@@ -22,6 +22,7 @@ const builderState = {
 const builderLimits = {
   chartRows: Number(document.body.dataset.chartRowLimit),
   maxCharts: Number(document.body.dataset.maxCharts),
+  maxPages: Number(document.body.dataset.maxPages),
   exports: document.body.dataset.dashboardExports === "true",
 };
 
@@ -487,6 +488,9 @@ function switchPage(pageId) {
 }
 
 function addPage() {
+  if (builderState.pages.length >= builderLimits.maxPages) {
+    return showBuilderToast(`Your plan supports up to ${builderLimits.maxPages} dashboard pages.`, true);
+  }
   recordLayoutHistory();
   const page = { id: makeBuilderId("page"), title: `Page ${builderState.pages.length + 1}`, charts: [] };
   builderState.pages.push(page);

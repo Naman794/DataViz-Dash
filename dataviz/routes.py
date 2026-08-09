@@ -86,6 +86,24 @@ def count_label(count, singular, plural=None):
     return f"{count} {singular if count == 1 else (plural or singular + 's')}"
 
 
+def uploaded_file_size(upload) -> int:
+    stream = upload.stream
+    try:
+        position = stream.tell()
+        stream.seek(0, 2)
+        size = stream.tell()
+        stream.seek(position)
+        return max(0, int(size))
+    except (AttributeError, OSError, TypeError, ValueError):
+        return max(0, int(upload.content_length or 0))
+
+
+def storage_limit_label(megabytes: int) -> str:
+    if megabytes >= 1024 and megabytes % 1024 == 0:
+        return f"{megabytes // 1024} GB"
+    return f"{megabytes} MB"
+
+
 @bp.get("/")
 def landing():
     return render_template("landing.html", plan=active_plan())
@@ -162,6 +180,14 @@ def upload_dataset():
     if upload is None:
         return error("Choose a CSV, XLS, or XLSX file.")
     repository = store()
+    source_size_bytes = uploaded_file_size(upload)
+    max_storage_bytes = plan["max_storage_mb"] * 1024 * 1024
+    if repository.total_source_bytes(owner_id()) + source_size_bytes > max_storage_bytes:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{storage_limit_label(plan['max_storage_mb'])} of uploaded data.",
+            "storage_capacity",
+        )
     if repository.count_datasets(owner_id()) >= plan["max_datasets"]:
         return plan_limit_error(
             f"Your {plan['label']} plan supports "
@@ -183,7 +209,9 @@ def upload_dataset():
 
     filename = secure_filename(upload.filename or "dataset") or "dataset"
     try:
-        dataset = repository.create_dataset(owner_id(), filename, frame)
+        dataset = repository.create_dataset(
+            owner_id(), filename, frame, source_size_bytes=source_size_bytes
+        )
     except DataValidationError as exc:
         return error(str(exc))
     stored_dataset = repository.get_dataset(owner_id(), dataset["id"])
@@ -287,6 +315,13 @@ def create_dashboard():
             "saved_dashboards",
         )
     raw_payload = request.get_json(silent=True) or {}
+    pages = raw_payload.get("pages")
+    if isinstance(pages, list) and len(pages) > plan["max_pages"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_pages'], 'dashboard page')} per dashboard.",
+            "dashboard_pages",
+        )
     charts = raw_payload.get("charts")
     if isinstance(charts, list) and len(charts) > plan["max_charts"]:
         return plan_limit_error(
@@ -317,6 +352,13 @@ def get_dashboard(dashboard_id):
 def update_dashboard(dashboard_id):
     plan = active_plan()
     raw_payload = request.get_json(silent=True) or {}
+    pages = raw_payload.get("pages")
+    if isinstance(pages, list) and len(pages) > plan["max_pages"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_pages'], 'dashboard page')} per dashboard.",
+            "dashboard_pages",
+        )
     charts = raw_payload.get("charts")
     if isinstance(charts, list) and len(charts) > plan["max_charts"]:
         return plan_limit_error(
@@ -388,8 +430,9 @@ def validate_dashboard_payload(raw_payload):
             }
         ]
     else:
-        if not isinstance(raw_pages, list) or not 1 <= len(raw_pages) <= MAX_DASHBOARD_PAGES:
-            return None, f"A dashboard must contain between 1 and {MAX_DASHBOARD_PAGES} pages."
+        max_pages = min(active_plan()["max_pages"], MAX_DASHBOARD_PAGES)
+        if not isinstance(raw_pages, list) or not 1 <= len(raw_pages) <= max_pages:
+            return None, f"A dashboard must contain between 1 and {max_pages} pages."
         charts = []
         seen_page_ids = set()
         for index, page in enumerate(raw_pages):
