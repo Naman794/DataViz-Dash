@@ -27,7 +27,13 @@ class Store:
     def __init__(self, database):
         self.db = database
 
-    def create_dataset(self, owner_id: str, filename: str, frame: pd.DataFrame):
+    def create_dataset(
+        self,
+        owner_id: str,
+        filename: str,
+        frame: pd.DataFrame,
+        source_size_bytes: int = 0,
+    ):
         now = utc_now()
         metadata = {
             "owner_id": owner_id,
@@ -35,6 +41,7 @@ class Store:
             "columns": list(frame.columns),
             "column_types": column_types(frame),
             "row_count": len(frame),
+            "source_size_bytes": max(0, int(source_size_bytes)),
             "created_at": now,
             "updated_at": now,
         }
@@ -55,6 +62,14 @@ class Store:
 
     def count_datasets(self, owner_id: str) -> int:
         return self.db.datasets.count_documents({"owner_id": owner_id})
+
+    def total_source_bytes(self, owner_id: str) -> int:
+        return sum(
+            max(0, int(document.get("source_size_bytes", 0)))
+            for document in self.db.datasets.find(
+                {"owner_id": owner_id}, {"source_size_bytes": 1}
+            )
+        )
 
     def get_dataset(self, owner_id: str, dataset_id: str):
         object_id = self._object_id(dataset_id)
@@ -452,6 +467,7 @@ class Store:
             "columns": document["columns"],
             "column_types": document.get("column_types", {}),
             "row_count": document["row_count"],
+            "source_size_bytes": max(0, int(document.get("source_size_bytes", 0))),
             "created_at": document["created_at"].isoformat(),
             "updated_at": document["updated_at"].isoformat(),
         }
