@@ -79,6 +79,7 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b'id="builder-redo"' in builder.data
     assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
+    assert b'data-max-pages="3"' in builder.data
 
     dataset = upload_dataset(client)
     payload = {
