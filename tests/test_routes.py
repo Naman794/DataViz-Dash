@@ -20,6 +20,7 @@ def upload_dataset(client):
     assert response.status_code == 201
     dataset = response.get_json()["dataset"]
     assert dataset["name"] == "sales.csv"
+    assert dataset["source_size_bytes"] > 0
     return dataset
 
 
@@ -28,8 +29,8 @@ def test_landing_page_loads(client):
     assert response.status_code == 200
     assert b"Turn spreadsheets into clear, interactive dashboards" in response.data
     assert b'href="/app"' in response.data
-    assert b">50,000<" in response.data
-    assert b"rows on Pro" in response.data
+    assert b">100,000<" in response.data
+    assert b"rows per dataset" in response.data
     assert b"No account required" in response.data
 
     assert client.get("/static/images/data-workspace.png").status_code == 200
@@ -40,10 +41,22 @@ def test_workspace_page_loads(client):
     response = client.get("/app")
     assert response.status_code == 200
     assert b"Upload, preview and clean" in response.data
-    assert b"maximum 10 MB and 100 rows" in response.data
+    assert b"maximum 50 MB and 100 rows" in response.data
     assert b"original filename kept automatically" in response.data
     assert b'href="/"' in response.data
     assert b'href="/builder"' in response.data
+
+
+def test_pricing_page_reflects_capacity_v2(client):
+    response = client.get("/pricing")
+    assert response.status_code == 200
+    assert b"50 MB uploads" in response.data
+    assert b"100 MB uploads" in response.data
+    assert b"100,000 rows per dataset" in response.data
+    assert b"150 MB total uploaded data" in response.data
+    assert b"5 GB total uploaded data" in response.data
+    assert b"3 dashboard pages" in response.data
+    assert b"20 dashboard pages" in response.data
 
 
 def test_dedicated_builder_page_and_saved_dashboard_route(client):
@@ -457,3 +470,60 @@ def test_free_chart_limit_returns_upgrade_response(client):
 
     assert response.status_code == 403
     assert response.get_json()["feature"] == "charts_per_dashboard"
+
+
+def test_free_storage_capacity_returns_upgrade_response():
+    mongo_client = mongomock.MongoClient()
+    application = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test-secret",
+            "MONGO_CLIENT": mongo_client,
+            "MONGO_DB_NAME": "dataviz_storage_limit_test",
+            "FREE_STORAGE_MB": 1,
+            "FREE_DATASET_LIMIT": 3,
+        }
+    )
+    client = application.test_client()
+    response = client.post(
+        "/api/datasets",
+        data={
+            "file": (
+                BytesIO(b"Value\n" + b"x" * (1024 * 1024)),
+                "large.csv",
+            )
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["feature"] == "storage_capacity"
+    mongo_client.close()
+
+
+def test_free_dashboard_page_limit_returns_upgrade_response(client):
+    dataset = upload_dataset(client)
+    chart = {
+        "title": "Sales",
+        "type": "bar",
+        "x": "Region",
+        "y": "Sales",
+        "aggregation": "sum",
+    }
+    pages = [
+        {"id": f"page-{index}", "title": f"Page {index}", "charts": []}
+        for index in range(1, 5)
+    ]
+    pages[0]["charts"] = [chart]
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Too many pages",
+            "dataset_id": dataset["id"],
+            "charts": [chart],
+            "pages": pages,
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["feature"] == "dashboard_pages"
