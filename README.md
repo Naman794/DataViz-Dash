@@ -1,87 +1,118 @@
 # DataViz Dash
 
-DataViz Dash is a spreadsheet analysis workspace for transforming CSV and Excel
-files into clean datasets and interactive dashboards. It brings data upload,
-previewing, cleaning, chart creation, dashboard persistence, and export tools
-into one focused interface.
+> Turn spreadsheets into clean, interactive dashboards without writing code.
 
-The project supports anonymous browser workspaces as well as email/password
-accounts for persistent access. It uses MongoDB for dataset and dashboard
-storage, Pandas for tabular processing, and Plotly for interactive charts.
+[![Live demo](https://img.shields.io/badge/Live_demo-Open_DataViz_Dash-111111?style=for-the-badge)](https://dataviz-dash.onrender.com/)
+![Release](https://img.shields.io/badge/release-v0.2.0-0f766e?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-Flask-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/license-Apache_2.0-555555?style=for-the-badge)
+
+DataViz Dash is a no-code spreadsheet analytics workspace created by
+**[Naman Sinha](https://github.com/Naman794)**. Upload CSV or Excel files,
+prepare the data, build multi-page dashboards, and export presentation-ready
+results from one focused browser workspace.
+
+## Try it live
+
+**Public URL:** [https://dataviz-dash.onrender.com/](https://dataviz-dash.onrender.com/)
+
+Create an account or use the available workspace to explore the complete upload,
+cleaning, visual-builder, dashboard, and export flow. The service is hosted on
+Render, so the first request may take a little longer if the free instance has
+been idle.
 
 ## Product preview
 
-### Data workspace
+### 1. Landing page
 
-Upload CSV, XLS, or XLSX data, inspect its structure, apply cleaning rules, and
-download the prepared dataset.
+The public landing page explains the workflow, feature set, and available plans.
 
-![Data workspace showing spreadsheet upload, dataset statistics and cleaning tools](docs/images/data-workspace.png)
+![DataViz Dash landing page](docs/images/landing-page-v0.2.png)
 
-### Interactive chart builder
+### 2. Inside the app
 
-Create responsive bar, line, area, pie, scatter, and histogram visualisations.
-Dashboards can combine multiple charts from the selected dataset.
+Upload CSV, XLS, or XLSX data, retain the original filename, switch datasets
+instantly, inspect rows and columns, apply cleaning rules, and download the
+prepared data.
 
-![Chart builder showing dashboard controls and two interactive charts](docs/images/chart-builder.png)
+![DataViz Dash data workspace](docs/images/data-workspace-v0.2.png)
 
-### Saved dashboards
+### 3. Builder area
 
-Keep dashboards attached to the current browser workspace or registered account,
-then reopen, update, export, or delete them when needed.
+Use the expanded Power BI-inspired canvas, contextual inspector, sheet-style
+page tabs, zoom controls, and drag-and-resize grid to create reusable dashboards.
 
-![Saved dashboards workspace](docs/images/saved-dashboards.png)
+![DataViz Dash dashboard builder](docs/images/dashboard-builder-v0.2.png)
+
+## Latest release — v0.2.0
+
+Version **v0.2.0** expands the original MVP into a broader dashboard workspace:
+
+- Redesigned graphite interface with a larger, presentation-oriented canvas
+- Dedicated builder with Data, Build, and Format inspector views
+- Sheet-style multi-page dashboards
+- Drag-and-resize visuals on a persisted 12-column grid
+- Fit page, Fit width, Actual size, focus, zoom, grid, undo, and redo controls
+- KPI cards, data tables, and eight chart/visual types
+- Instant dataset switching without an extra open action
+- Automatic preservation of uploaded filenames
+- Field profiling, date grouping, sorting, Top-N, duplication, and formatting
+- Account-backed datasets, dashboards, usage reporting, and admin controls
+- Server-enforced Free and Pro capacity entitlements
+- Expanded Free capacity and a 5 GB total-upload allowance for Pro accounts
 
 ## Core capabilities
 
 - CSV, XLS, and XLSX upload and preview
 - Column renaming and removal
 - Missing-value replacement or incomplete-row deletion
-- Duplicate and completely empty row removal
+- Duplicate and completely empty-row removal
 - Cleaned CSV download
-- Bar, line, area, pie, scatter, and histogram charts
-- Multi-chart dashboard creation and persistence
-- Dedicated full-screen builder with charts, KPI cards, data tables, and field profiles
+- Bar, line, area, pie, scatter, histogram, KPI, and table visuals
+- Multi-visual, multi-page dashboard creation and persistence
 - Per-visual sorting, Top-N limits, editing, duplication, and responsive sizing
-- Graphite workspace with a compact view rail and contextual Data, Build, and Format inspector
-- Zoomable 16:9 dashboard page with grid, Fit page, Fit width, Actual size, and focus controls
-- Sheet-style dashboard page tabs for broader multi-view analyses
-- Drag-and-resize visual placement on a persisted 12-column snap grid
-- Undo and redo for page and layout changes
-- Instant dataset switching while retaining each uploaded file's original name
 - Month, quarter, and year grouping for date-based visuals
 - Chart PNG, dashboard JSON, and print-ready PDF exports
 - Anonymous browser-isolated workspaces
 - Email/password accounts with persistent workspace ownership
-- Server-enforced Free and Pro feature entitlements
-- Protected administrator console for account activity, membership, and access control
-- Responsive interface for desktop and smaller screens
+- Protected administrator console with activity and access controls
+- Responsive layouts for desktop and smaller screens
 
 ## Product flow
 
 1. Upload a spreadsheet and review its detected rows and columns.
 2. Apply cleaning rules to prepare the dataset for analysis.
-3. Select fields and aggregations to create interactive charts.
-4. Save the resulting dashboard for future access or export.
+3. Open the builder and choose fields, aggregations, and visual types.
+4. Arrange visuals across one or more sheet-style dashboard pages.
+5. Save the dashboard for future access or export.
 
-## Plans and capacity
+## Free and Pro models
 
-| Capability | Free | Pro preview |
+| Capability | Free | Pro |
 | --- | ---: | ---: |
-| Maximum upload | 50 MB | 100 MB |
+| Recommended price | ₹0 | ₹499/month or ₹4,999/year |
+| Maximum upload per file | 50 MB | 100 MB |
 | Rows per dataset | 100,000 | 100,000 |
-| Total uploaded data | 150 MB | 5 GB |
+| Total uploaded source data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 | 12 |
 | Pages per dashboard | 3 | 20 |
 | Chart data processed | 50,000 rows | 100,000 rows |
 | Basic data cleaning | Included | Included |
-| Cleaned CSV and chart PNG | Included | Included |
-| Dashboard JSON and print / PDF | Upgrade required | Included |
+| Cleaned CSV and chart PNG export | Included | Included |
+| Dashboard JSON and print/PDF export | Upgrade required | Included |
 
-Pro access is currently a product preview. Live payment checkout has not been
-enabled yet.
+The Pro price is a recommended India launch price. Payment checkout is not live
+yet, so Pro remains a preview entitlement. At ₹499 per month, DataViz Dash enters
+below established business-intelligence tools while its connector,
+collaboration, and automation set is still growing. The ₹4,999 annual option
+provides roughly two months of savings.
+
+The **5 GB Pro allowance is total account storage measured from original upload
+sizes**. It is not a 5 GB single-file limit; individual Pro uploads remain capped
+at 100 MB for safe synchronous processing in the current Flask and Pandas
+architecture.
 
 ## Technology
 
@@ -94,6 +125,7 @@ enabled yet.
 | Interface | HTML, CSS, and JavaScript |
 | Quality | Pytest, Ruff, and GitHub Actions |
 | Packaging | Docker and GitHub Container Registry workflow-ready |
+| Hosting | Render |
 
 ## Privacy and access
 
@@ -101,17 +133,22 @@ enabled yet.
 - Anonymous data is isolated through a signed browser workspace identifier.
 - Registered users can claim an anonymous workspace and access it after signing in.
 - Passwords are stored as secure hashes rather than plaintext.
-- Plan limits are checked by the server instead of relying only on hidden controls.
+- Plan limits are enforced by the server rather than only hidden in the interface.
 - Administrative membership and suspension changes are written to an audit trail.
 
 ## Project status
 
-DataViz Dash is under active development. Version `V 0.1` established the
-working data-cleaning and dashboard MVP. The current development branch adds
-100,000-row capacity, account storage entitlements, and a staged paywall.
+DataViz Dash is under active development. Version **v0.1** established the
+data-cleaning and dashboard MVP. Version **v0.2.0** adds the expanded builder,
+multi-page dashboards, instant dataset switching, refreshed UI, account usage,
+and the revised Free and Pro capacity model.
 
-See the [V 0.1 release](https://github.com/Naman794/DataViz-Dash/releases/tag/v0.1)
-and the [freemium product plan](docs/FREEMIUM_PLAN.md).
+See the [release history](https://github.com/Naman794/DataViz-Dash/releases) and
+the [freemium product plan](docs/FREEMIUM_PLAN.md).
+
+## Creator
+
+**DataViz Dash was designed and built by [Naman Sinha](https://github.com/Naman794).**
 
 ## License
 
