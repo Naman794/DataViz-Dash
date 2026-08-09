@@ -8,22 +8,26 @@ charging for larger workloads, persistence, and professional exports.
 | Capability | Free | Pro |
 | --- | --- | --- |
 | File types | CSV, XLS, XLSX | CSV, XLS, XLSX |
-| Maximum upload | 10 MB | 50 MB |
-| Maximum rows per dataset | 10,000 | 50,000 |
+| Maximum upload | 50 MB | 100 MB |
+| Maximum rows per dataset | 100,000 | 100,000 |
+| Total uploaded data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
-| Charts per dashboard | 4 | 8 |
-| Chart data | First 10,000 rows | Up to 50,000 rows |
+| Visuals per dashboard | 4 | 12 |
+| Dashboard pages | 3 | 20 |
+| Chart data | First 50,000 rows | Up to 100,000 rows |
 | Basic cleaning | Included | Included |
 | Cleaned CSV download | Included | Included |
 | Chart PNG export | Included | Included |
 | Dashboard JSON export | Upgrade required | Included |
 | Print / PDF export button | Upgrade required | Included |
-| Workspace identity | Anonymous browser workspace | Signed-in account |
-| Data retention | Until browser workspace is cleared | Persistent account workspace |
+| Workspace identity | Anonymous or signed-in | Signed-in account |
+| Data retention | Browser or account workspace | Persistent account workspace |
 
-The 50 MB and 50,000-row values are application ceilings, not the anonymous
-Free allowance. They can remain configurable through environment variables.
+The Pro 5 GB allowance is a total account quota measured from uploaded source
+sizes. It is not a 5 GB single-file limit. The synchronous Flask and Pandas
+pipeline currently caps one upload at 100 MB; multi-gigabyte individual files
+will require direct object-storage uploads and asynchronous, chunked processing.
 
 ## Enforcement model
 
@@ -67,7 +71,7 @@ the source of truth. Webhook processing must verify signatures and be idempotent
 
 ## Delivery phases
 
-1. **Capacity:** support the 50 MB / 50,000-row technical ceiling safely. *(Implemented)*
+1. **Capacity:** support the 100 MB / 100,000-row technical ceiling and account quotas safely. *(Implemented)*
 2. **Entitlements:** add Free and Pro plan definitions plus server-side checks. *(Implemented)*
 3. **Identity:** add email-based accounts and let users claim an anonymous workspace. *(Implemented)*
 4. **Paywall:** add `/pricing`, upgrade prompts, and plan-limit messaging. *(Implemented without checkout)*
