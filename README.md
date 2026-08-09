@@ -90,7 +90,7 @@ Version **v0.2.0** expands the original MVP into a broader dashboard workspace:
 
 | Capability | Free | Pro |
 | --- | ---: | ---: |
-| Recommended price | ₹0 | ₹499/month or ₹4,999/year |
+| Upcoming price | ₹0 | ₹499/month or ₹4,999/year |
 | Maximum upload per file | 50 MB | 100 MB |
 | Rows per dataset | 100,000 | 100,000 |
 | Total uploaded source data | 150 MB | 5 GB |
@@ -103,7 +103,7 @@ Version **v0.2.0** expands the original MVP into a broader dashboard workspace:
 | Cleaned CSV and chart PNG export | Included | Included |
 | Dashboard JSON and print/PDF export | Upgrade required | Included |
 
-The Pro price is a recommended India launch price. Payment checkout is not live
+The Pro price is a India launch price. Payment checkout is not live
 yet, so Pro remains a preview entitlement. At ₹499 per month, DataViz Dash enters
 below established business-intelligence tools while its connector,
 collaboration, and automation set is still growing. The ₹4,999 annual option
