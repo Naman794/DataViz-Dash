@@ -33,9 +33,12 @@
         <ul class="feature-list">
           <li>{{ free_plan.max_upload_mb }} MB uploads</li>
           <li>{{ "{:,}".format(free_plan.max_dataset_rows) }} rows per dataset</li>
+          <li>{{ free_plan.max_storage_mb }} MB total uploaded data</li>
           <li>{{ free_plan.max_datasets }} saved datasets</li>
           <li>{{ free_plan.max_dashboards }} saved dashboards</li>
-          <li>{{ free_plan.max_charts }} charts per dashboard</li>
+          <li>{{ free_plan.max_charts }} visuals per dashboard</li>
+          <li>{{ free_plan.max_pages }} dashboard pages</li>
+          <li>Charts process up to {{ "{:,}".format(free_plan.chart_row_limit) }} rows</li>
           <li>CSV, XLS and XLSX cleaning</li>
           <li>Cleaned CSV and chart PNG exports</li>
         </ul>
@@ -54,9 +57,11 @@
         <ul class="feature-list">
           <li>{{ pro_plan.max_upload_mb }} MB uploads</li>
           <li>{{ "{:,}".format(pro_plan.max_dataset_rows) }} rows per dataset</li>
+          <li>{{ pro_plan.max_storage_mb // 1024 }} GB total uploaded data</li>
           <li>{{ pro_plan.max_datasets }} saved datasets</li>
           <li>{{ pro_plan.max_dashboards }} saved dashboards</li>
-          <li>{{ pro_plan.max_charts }} charts per dashboard</li>
+          <li>{{ pro_plan.max_charts }} visuals per dashboard</li>
+          <li>{{ pro_plan.max_pages }} dashboard pages</li>
           <li>Full {{ "{:,}".format(pro_plan.chart_row_limit) }}-row chart processing</li>
           <li>Dashboard JSON and print / PDF exports</li>
         </ul>
