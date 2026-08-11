@@ -142,6 +142,8 @@ p { color: var(--muted); line-height: 1.6; }
 .upload-card.dragging { border-color: var(--primary); background: var(--primary-soft); transform: translateY(-2px); }
 .upload-card h3 { margin: 8px 0 4px; font-size: 1.15rem; }
 .upload-card p { margin-bottom: 18px; }
+.upload-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.upload-helper { margin-top: 11px; color: var(--muted); font-size: .78rem; }
 .upload-icon { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 17px; background: var(--primary-soft); color: var(--primary); font-size: 1.8rem; font-weight: 700; }
 .upload-progress { width: min(360px, 80%); height: 5px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #e4e2f5; }
 .upload-progress span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--primary); animation: progress 1s infinite ease-in-out; }
