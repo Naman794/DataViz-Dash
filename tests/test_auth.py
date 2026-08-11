@@ -89,8 +89,8 @@ def test_manually_assigned_pro_plan_unlocks_capacity_and_export(app):
     )
 
     home = client.get("/app")
-    assert b"maximum 50 MB and 100 rows" in home.data
-    assert b'data-max-charts="8"' in home.data
+    assert b"maximum 100 MB and 100 rows" in home.data
+    assert b'data-max-charts="12"' in home.data
 
     dataset = upload_dataset(client)
     payload = {
