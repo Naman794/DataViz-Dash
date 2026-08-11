@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function cacheElements() {
   [
     "page-title", "db-status", "refresh-button", "upload-card", "file-input",
-    "choose-file-button", "upload-progress", "dataset-select", "download-data-button",
+    "choose-file-button", "sample-data-button", "upload-progress", "dataset-select", "download-data-button",
     "delete-data-button", "dataset-workspace", "row-count", "column-count",
     "preview-count", "column-rules", "missing-strategy", "fill-value-field",
     "fill-value", "missing-columns", "remove-duplicates", "remove-empty",
@@ -30,6 +30,7 @@ function cacheElements() {
 
 function bindEvents() {
   elements["choose-file-button"].addEventListener("click", () => elements["file-input"].click());
+  elements["sample-data-button"].addEventListener("click", openSampleDashboard);
   elements["file-input"].addEventListener("change", () => uploadFile(elements["file-input"].files[0]));
   ["dragenter", "dragover"].forEach((eventName) => {
     elements["upload-card"].addEventListener(eventName, (event) => {
@@ -126,9 +127,31 @@ async function uploadFile(file) {
   }
 }
 
+async function openSampleDashboard() {
+  setDemoLoading(true);
+  try {
+    const result = await api("/api/demo", { method: "POST" });
+    showToast(result.reused ? "Opening your sample dashboard." : "Sample dashboard created.");
+    window.location.assign(result.redirect_url);
+  } catch (error) {
+    showToast(error.message, true);
+  } finally {
+    setDemoLoading(false);
+  }
+}
+
+function setDemoLoading(isLoading) {
+  elements["sample-data-button"].disabled = isLoading;
+  elements["choose-file-button"].disabled = isLoading;
+  elements["sample-data-button"].textContent = isLoading
+    ? "Preparing demo…"
+    : "Try sample dashboard";
+}
+
 function setUploading(isUploading) {
   elements["upload-progress"].classList.toggle("hidden", !isUploading);
   elements["choose-file-button"].disabled = isUploading;
+  elements["sample-data-button"].disabled = isUploading;
   elements["choose-file-button"].textContent = isUploading ? "Uploading…" : "Choose file";
 }
 
