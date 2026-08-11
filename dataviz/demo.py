@@ -28,8 +28,8 @@ def sample_frame() -> pd.DataFrame:
     return pd.DataFrame(SAMPLE_ROWS)
 
 
-def sample_dashboard_payload(dataset_id: str) -> dict:
-    """Return a Free-plan-compatible four-visual demo dashboard."""
+def sample_dashboard_payload(dataset_id: str, max_charts: int = 4) -> dict:
+    """Return a demo dashboard bounded by the active plan's visual limit."""
     charts = [
         {
             "id": "sample-revenue-kpi",
@@ -71,6 +71,7 @@ def sample_dashboard_payload(dataset_id: str) -> dict:
             "layout": {"x": 8, "y": 7, "w": 4, "h": 7},
         },
     ]
+    charts = charts[: max(1, min(4, max_charts))]
     return {
         "title": SAMPLE_DASHBOARD_TITLE,
         "dataset_id": dataset_id,
