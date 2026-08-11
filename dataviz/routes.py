@@ -232,7 +232,7 @@ def create_demo():
         )
 
     payload, validation_error = validate_dashboard_payload(
-        sample_dashboard_payload(dataset["id"])
+        sample_dashboard_payload(dataset["id"], plan["max_charts"])
     )
     if validation_error:
         return error(validation_error)
