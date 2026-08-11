@@ -20,8 +20,15 @@ from flask import (
 from pymongo.errors import PyMongoError
 from werkzeug.utils import secure_filename
 
+from . import __version__
 from .auth import current_user
 from .database import get_database
+from .demo import (
+    SAMPLE_DASHBOARD_TITLE,
+    SAMPLE_DATASET_NAME,
+    sample_dashboard_payload,
+    sample_frame,
+)
 from .plans import resolve_plan
 from .storage import Store
 from .tabular import DataLimitError, DataValidationError, clean_frame, parse_upload
@@ -157,9 +164,92 @@ def pricing():
 def health():
     try:
         get_database().command("ping")
-        return jsonify(status="ok", database="connected")
+        return jsonify(status="ok", database="connected", version=__version__)
     except PyMongoError:
-        return jsonify(status="degraded", database="unavailable"), 503
+        return (
+            jsonify(
+                status="degraded",
+                database="unavailable",
+                version=__version__,
+            ),
+            503,
+        )
+
+
+@bp.get("/api/version")
+def version():
+    return jsonify(name="DataViz Dash", version=__version__)
+
+
+@bp.post("/api/demo")
+def create_demo():
+    plan = active_plan()
+    repository = store()
+    datasets = repository.list_datasets(owner_id())
+    dataset = next(
+        (item for item in datasets if item["name"] == SAMPLE_DATASET_NAME),
+        None,
+    )
+    dashboard = None
+    if dataset is not None:
+        dashboard = next(
+            (
+                item
+                for item in repository.list_dashboards(owner_id())
+                if item["title"] == SAMPLE_DASHBOARD_TITLE
+                and item["dataset_id"] == dataset["id"]
+            ),
+            None,
+        )
+
+    if dataset is not None and dashboard is not None:
+        return jsonify(
+            dataset=dataset,
+            dashboard=dashboard,
+            redirect_url=f"/builder/{dashboard['id']}",
+            reused=True,
+        )
+
+    if repository.count_dashboards(owner_id()) >= plan["max_dashboards"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_dashboards'], 'saved dashboard')}.",
+            "saved_dashboards",
+        )
+    if dataset is None and repository.count_datasets(owner_id()) >= plan["max_datasets"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_datasets'], 'saved dataset')}.",
+            "saved_datasets",
+        )
+
+    created_dataset = dataset is None
+    if created_dataset:
+        dataset = repository.create_dataset(
+            owner_id(),
+            SAMPLE_DATASET_NAME,
+            sample_frame(),
+        )
+
+    payload, validation_error = validate_dashboard_payload(
+        sample_dashboard_payload(dataset["id"])
+    )
+    if validation_error:
+        return error(validation_error)
+    dashboard = repository.create_dashboard(owner_id(), payload)
+    record_account_activity(
+        "demo.created",
+        {"dataset_id": dataset["id"], "dashboard_id": dashboard["id"]},
+    )
+    return (
+        jsonify(
+            dataset=dataset,
+            dashboard=dashboard,
+            redirect_url=f"/builder/{dashboard['id']}",
+            reused=False,
+        ),
+        201,
+    )
 
 
 @bp.get("/api/datasets")
