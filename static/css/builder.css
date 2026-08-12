@@ -73,6 +73,8 @@
 .dashboard-tab.active { border-color: #cfd5d1; background: #fff; color: var(--ink); box-shadow: inset 0 2px 0 var(--accent); }
 .dashboard-tab-add { min-width: 34px; min-height: 30px; border: 0; border-radius: 7px 7px 0 0; background: transparent; color: var(--muted); font-size: 1rem; }
 .dashboard-tab-add:hover { background: #e8ebe9; color: var(--ink); }
+.dashboard-tab-add.locked { min-width: auto; color: var(--accent); padding: 6px 10px; font-size: .66rem; font-weight: 800; }
+.dashboard-tab-add.locked:hover { background: #e6f5f2; color: var(--primary); }
 .analysis-plot { width: 100%; height: 100%; min-height: 0; }
 .kpi-visual { display: grid; min-height: 100%; place-items: center; align-content: center; padding: 32px; text-align: center; }
 .kpi-visual span { color: var(--muted); font-size: .78rem; }
