@@ -100,7 +100,7 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 | 12 |
-| Pages per dashboard | 3 | 20 |
+| Pages per dashboard | 1 | 20 |
 | Chart data processed | 50,000 rows | 100,000 rows |
 | Basic data cleaning | Included | Included |
 | Cleaned CSV and chart PNG export | Included | Included |
