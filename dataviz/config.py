@@ -35,7 +35,7 @@ class Config:
     FREE_CHART_LIMIT = int(os.getenv("FREE_CHART_LIMIT", "4"))
     FREE_CHART_ROW_LIMIT = int(os.getenv("FREE_CHART_ROW_LIMIT", "50000"))
     FREE_STORAGE_MB = int(os.getenv("FREE_STORAGE_MB", "150"))
-    FREE_PAGE_LIMIT = int(os.getenv("FREE_PAGE_LIMIT", "3"))
+    FREE_PAGE_LIMIT = int(os.getenv("FREE_PAGE_LIMIT", "1"))
     PRO_DATASET_LIMIT = int(os.getenv("PRO_DATASET_LIMIT", "25"))
     PRO_DASHBOARD_LIMIT = int(os.getenv("PRO_DASHBOARD_LIMIT", "25"))
     PRO_CHART_LIMIT = int(os.getenv("PRO_CHART_LIMIT", "12"))
