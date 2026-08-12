@@ -10,7 +10,7 @@ def test_default_capacity_limits():
     assert Config.FREE_DATASET_ROWS == 100000
     assert Config.FREE_CHART_ROW_LIMIT == 50000
     assert Config.FREE_STORAGE_MB == 150
-    assert Config.FREE_PAGE_LIMIT == 3
+    assert Config.FREE_PAGE_LIMIT == 1
     assert Config.FREE_DATASET_LIMIT == 3
     assert Config.PRO_DATASET_LIMIT == 25
     assert Config.PRO_CHART_LIMIT == 12
