@@ -252,6 +252,7 @@ def test_legacy_dashboard_payload_defaults_to_no_filters(client):
 
 
 def test_dashboard_persists_pages_and_grid_layout(client):
+    client.application.config["FREE_PAGE_LIMIT"] = 2
     dataset = upload_dataset(client)
     chart = {
         "title": "Sales",
