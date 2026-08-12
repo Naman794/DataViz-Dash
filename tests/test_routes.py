@@ -43,6 +43,7 @@ def test_workspace_page_loads(client):
     assert b"Upload, preview and clean" in response.data
     assert b"maximum 50 MB and 100 rows" in response.data
     assert b"original filename kept automatically" in response.data
+    assert b'id="sample-data-button"' in response.data
     assert b'href="/"' in response.data
     assert b'href="/builder"' in response.data
 
@@ -52,11 +53,49 @@ def test_pricing_page_reflects_capacity_v2(client):
     assert response.status_code == 200
     assert b"50 MB uploads" in response.data
     assert b"100 MB uploads" in response.data
-    assert b"100,000 rows per dataset" in response.data
+    assert b"100 rows per dataset" in response.data
     assert b"150 MB total uploaded data" in response.data
     assert b"5 GB total uploaded data" in response.data
     assert b"3 dashboard pages" in response.data
     assert b"20 dashboard pages" in response.data
+
+
+def test_health_and_version_endpoints(client):
+    health = client.get("/api/health")
+    assert health.status_code == 200
+    assert health.get_json() == {
+        "status": "ok",
+        "database": "connected",
+        "version": "0.2.1",
+    }
+
+    version = client.get("/api/version")
+    assert version.status_code == 200
+    assert version.get_json() == {
+        "name": "DataViz Dash",
+        "version": "0.2.1",
+    }
+
+
+def test_sample_dashboard_is_created_once_and_reused(client):
+    first = client.post("/api/demo")
+    assert first.status_code == 201
+    first_payload = first.get_json()
+    assert first_payload["reused"] is False
+    assert first_payload["dataset"]["name"] == "dataviz-sample-sales.csv"
+    assert first_payload["dataset"]["row_count"] == 12
+    assert first_payload["dataset"]["source_size_bytes"] == 0
+    assert first_payload["dashboard"]["title"] == "Sample sales overview"
+    assert len(first_payload["dashboard"]["charts"]) == 2
+    assert first_payload["redirect_url"].startswith("/builder/")
+
+    second = client.post("/api/demo")
+    assert second.status_code == 200
+    second_payload = second.get_json()
+    assert second_payload["reused"] is True
+    assert second_payload["dataset"]["id"] == first_payload["dataset"]["id"]
+    assert second_payload["dashboard"]["id"] == first_payload["dashboard"]["id"]
+    assert client.get(second_payload["redirect_url"]).status_code == 200
 
 
 def test_dedicated_builder_page_and_saved_dashboard_route(client):

@@ -3,7 +3,7 @@
 > Turn spreadsheets into clean, interactive dashboards without writing code.
 
 [![Live demo](https://img.shields.io/badge/Live_demo-Open_DataViz_Dash-111111?style=for-the-badge)](https://dataviz-dash.onrender.com/)
-![Release](https://img.shields.io/badge/release-v0.2.0-0f766e?style=for-the-badge)
+![Release](https://img.shields.io/badge/release-v0.2.1-0f766e?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-Flask-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache_2.0-555555?style=for-the-badge)
 
@@ -44,10 +44,13 @@ page tabs, zoom controls, and drag-and-resize grid to create reusable dashboards
 
 ![DataViz Dash dashboard builder](docs/images/dashboard-builder-v0.2.png)
 
-## Latest release — v0.2.0
+## Latest release — v0.2.1
 
-Version **v0.2.0** expands the original MVP into a broader dashboard workspace:
+Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 
+- One-click sample dataset and ready-made dashboard for first-time visitors
+- Deployment health and version endpoints for release monitoring
+- Privacy-safe public product screenshots
 - Redesigned graphite interface with a larger, presentation-oriented canvas
 - Dedicated builder with Data, Build, and Format inspector views
 - Sheet-style multi-page dashboards
@@ -80,7 +83,7 @@ Version **v0.2.0** expands the original MVP into a broader dashboard workspace:
 
 ## Product flow
 
-1. Upload a spreadsheet and review its detected rows and columns.
+1. Try the bundled sample dashboard or upload your own spreadsheet.
 2. Apply cleaning rules to prepare the dataset for analysis.
 3. Open the builder and choose fields, aggregations, and visual types.
 4. Arrange visuals across one or more sheet-style dashboard pages.
@@ -139,7 +142,7 @@ architecture.
 ## Project status
 
 DataViz Dash is under active development. Version **v0.1** established the
-data-cleaning and dashboard MVP. Version **v0.2.0** adds the expanded builder,
+data-cleaning and dashboard MVP. Version **v0.2.1** adds the expanded builder,
 multi-page dashboards, instant dataset switching, refreshed UI, account usage,
 and the revised Free and Pro capacity model.
 

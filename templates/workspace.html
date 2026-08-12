@@ -95,7 +95,11 @@
           <div class="upload-icon" aria-hidden="true">⇧</div>
           <h3>Drop your spreadsheet here</h3>
           <p>CSV, XLS or XLSX · maximum {{ max_upload_mb }} MB and {{ "{:,}".format(max_dataset_rows) }} rows · original filename kept automatically</p>
-          <button class="button primary" id="choose-file-button">Choose file</button>
+          <div class="upload-actions">
+            <button class="button primary" id="choose-file-button">Choose file</button>
+            <button class="button tertiary" id="sample-data-button">Try sample dashboard</button>
+          </div>
+          <small class="upload-helper">No file needed — open a ready-made sales dashboard in one click.</small>
           <div class="upload-progress hidden" id="upload-progress"><span></span></div>
         </div>
 
