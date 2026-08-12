@@ -56,7 +56,7 @@ def test_pricing_page_reflects_capacity_v2(client):
     assert b"100 rows per dataset" in response.data
     assert b"150 MB total uploaded data" in response.data
     assert b"5 GB total uploaded data" in response.data
-    assert b"3 dashboard pages" in response.data
+    assert b"1 dashboard page" in response.data
     assert b"20 dashboard pages" in response.data
 
 
@@ -118,7 +118,7 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b'id="builder-redo"' in builder.data
     assert b"Date grouping" in builder.data
     assert b'data-chart-row-limit="100"' in builder.data
-    assert b'data-max-pages="3"' in builder.data
+    assert b'data-max-pages="1"' in builder.data
 
     dataset = upload_dataset(client)
     payload = {
@@ -552,7 +552,7 @@ def test_free_dashboard_page_limit_returns_upgrade_response(client):
     }
     pages = [
         {"id": f"page-{index}", "title": f"Page {index}", "charts": []}
-        for index in range(1, 5)
+        for index in range(1, 3)
     ]
     pages[0]["charts"] = [chart]
     response = client.post(
@@ -567,3 +567,31 @@ def test_free_dashboard_page_limit_returns_upgrade_response(client):
 
     assert response.status_code == 403
     assert response.get_json()["feature"] == "dashboard_pages"
+
+
+def test_visual_limit_counts_charts_across_all_pages(client):
+    client.application.config["FREE_PAGE_LIMIT"] = 3
+    dataset = upload_dataset(client)
+    chart = {
+        "title": "Sales",
+        "type": "bar",
+        "x": "Region",
+        "y": "Sales",
+        "aggregation": "sum",
+    }
+    response = client.post(
+        "/api/dashboards",
+        json={
+            "title": "Cross-page bypass attempt",
+            "dataset_id": dataset["id"],
+            "pages": [
+                {"id": "page-1", "title": "Page 1", "charts": [chart, chart]},
+                {"id": "page-2", "title": "Page 2", "charts": [chart, chart]},
+            ],
+        },
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload["feature"] == "charts_per_dashboard"
+    assert "across all pages" in payload["error"]
