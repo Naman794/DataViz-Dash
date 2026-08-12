@@ -472,8 +472,14 @@ function renderPageTabs() {
     button.addEventListener("dblclick", () => renamePage(page.id));
     container.append(button);
   });
-  const add = smallButton("＋", "Add dashboard page", addPage);
-  add.className = "dashboard-tab-add";
+  const pagesLocked = builderLimits.maxPages === 1;
+  const add = smallButton(
+    pagesLocked ? "◇ Pro pages" : "＋",
+    pagesLocked ? "Multiple dashboard pages are available on Pro" : "Add dashboard page",
+    addPage,
+  );
+  add.className = `dashboard-tab-add${pagesLocked ? " locked" : ""}`;
+  add.setAttribute("aria-disabled", String(pagesLocked));
   container.append(add);
 }
 
@@ -489,7 +495,10 @@ function switchPage(pageId) {
 
 function addPage() {
   if (builderState.pages.length >= builderLimits.maxPages) {
-    return showBuilderToast(`Your plan supports up to ${builderLimits.maxPages} dashboard pages.`, true);
+    const message = builderLimits.maxPages === 1
+      ? "Multiple dashboard pages are available on Pro."
+      : `Your plan supports up to ${builderLimits.maxPages} dashboard pages.`;
+    return showBuilderToast(message, true);
   }
   recordLayoutHistory();
   const page = { id: makeBuilderId("page"), title: `Page ${builderState.pages.length + 1}`, charts: [] };
