@@ -14,7 +14,7 @@ charging for larger workloads, persistence, and professional exports.
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 | 12 |
-| Dashboard pages | 3 | 20 |
+| Dashboard pages | 1 | 20 |
 | Chart data | First 50,000 rows | Up to 100,000 rows |
 | Basic cleaning | Included | Included |
 | Cleaned CSV download | Included | Included |
