@@ -6,6 +6,8 @@ import hmac
 import re
 import secrets
 
+from authlib.integrations.base_client.errors import OAuthError
+from authlib.integrations.flask_client import OAuth
 from flask import (
     Blueprint,
     current_app,
@@ -94,6 +96,7 @@ def inject_account_context():
         "account_user": user,
         "account_plan": resolve_plan(user),
         "account_is_admin": is_admin_user(user),
+        "google_auth_enabled": google_auth_enabled(),
         "csrf_token": csrf_token,
     }
 
@@ -142,6 +145,94 @@ def register():
     establish_account_session(user, session.get("owner_id"))
     repository.record_login(str(user["_id"]), "account.registered")
     flash("Account created. Your workspace is now attached to this account.", "success")
+    return redirect(url_for("main.index"))
+
+
+@bp.get("/account/google")
+def google_login():
+    if current_user() is not None:
+        return redirect(url_for("auth.account"))
+    if not google_auth_enabled():
+        flash("Google sign-in is not configured yet.", "error")
+        return redirect(url_for("auth.account"))
+
+    google = oauth.create_client("google")
+    if google is None:
+        flash("Google sign-in is temporarily unavailable.", "error")
+        return redirect(url_for("auth.account"))
+    return google.authorize_redirect(google_redirect_uri())
+
+
+@bp.get("/account/google/callback")
+def google_callback():
+    if not google_auth_enabled():
+        flash("Google sign-in is not configured yet.", "error")
+        return redirect(url_for("auth.account"))
+
+    google = oauth.create_client("google")
+    if google is None:
+        flash("Google sign-in is temporarily unavailable.", "error")
+        return redirect(url_for("auth.account"))
+
+    try:
+        token = google.authorize_access_token()
+        userinfo = token.get("userinfo") or {}
+    except (OAuthError, KeyError, TypeError, ValueError) as exc:
+        current_app.logger.warning("Google sign-in failed: %s", exc)
+        flash("Google sign-in could not be completed. Please try again.", "error")
+        return redirect(url_for("auth.account"))
+
+    email = normalize_email(str(userinfo.get("email", "")))
+    subject = str(userinfo.get("sub", "")).strip()
+    email_verified = userinfo.get("email_verified")
+    if (
+        not subject
+        or len(subject) > 255
+        or len(email) > 254
+        or not EMAIL_PATTERN.fullmatch(email)
+        or email_verified not in {True, "true", 1}
+    ):
+        flash("Google did not return a verified email address.", "error")
+        return redirect(url_for("auth.account"))
+
+    repository = Store(get_database())
+    user = repository.get_user_by_google_subject(subject)
+    created = False
+    try:
+        if user is None:
+            user = repository.get_user_by_email(email)
+            if user is not None:
+                linked_subject = user.get("google_subject")
+                if linked_subject and linked_subject != subject:
+                    flash(
+                        "That email is already linked to another Google account.",
+                        "error",
+                    )
+                    return redirect(url_for("auth.account"))
+                user = repository.link_google_identity(str(user["_id"]), subject)
+            else:
+                password_hash = generate_password_hash(secrets.token_urlsafe(48))
+                user = repository.create_user(email, password_hash, subject)
+                created = True
+    except DuplicateKeyError:
+        flash("That Google account is already linked to another user.", "error")
+        return redirect(url_for("auth.account"))
+
+    if user is None:
+        flash("Google sign-in could not be completed. Please try again.", "error")
+        return redirect(url_for("auth.account"))
+    if user.get("status") == "suspended":
+        flash("This account is suspended. Contact the administrator.", "error")
+        return redirect(url_for("auth.account"))
+
+    previous_owner_id = session.get("owner_id")
+    establish_account_session(user, previous_owner_id)
+    event_type = "account.google_registered" if created else "account.google_login"
+    repository.record_login(str(user["_id"]), event_type)
+    flash(
+        "Account created with Google." if created else "Signed in with Google.",
+        "success",
+    )
     return redirect(url_for("main.index"))
 
 

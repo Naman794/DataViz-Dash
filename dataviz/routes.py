@@ -128,6 +128,11 @@ def landing():
     return render_template("landing.html", plan=active_plan())
 
 
+@bp.get("/docs")
+def documentation():
+    return render_template("docs.html", plan=active_plan())
+
+
 @bp.get("/app")
 def index():
     plan = active_plan()

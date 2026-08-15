@@ -27,6 +27,7 @@
     <nav class="builder-header-nav" aria-label="Builder navigation">
       <a href="{{ url_for('main.index') }}">Data workspace</a>
       <a class="active" href="{{ url_for('main.builder') }}">Builder</a>
+      <a href="{{ url_for('main.documentation') }}">Docs</a>
       {% if account_is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin</a>{% endif %}
     </nav>
     <div class="builder-header-actions">

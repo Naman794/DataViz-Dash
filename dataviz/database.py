@@ -24,6 +24,7 @@ def init_database(app):
 
     try:
         database.users.create_index("email", unique=True)
+        database.users.create_index("google_subject", unique=True, sparse=True)
         database.users.create_index(
             [("status", ASCENDING), ("plan", ASCENDING), ("created_at", DESCENDING)]
         )

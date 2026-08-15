@@ -37,6 +37,19 @@ def test_landing_page_loads(client):
     assert client.get("/static/images/chart-builder.png").status_code == 200
 
 
+def test_documentation_page_lists_complete_product_workflow(client):
+    response = client.get("/docs")
+
+    assert response.status_code == 200
+    assert b"Everything you need to build a dashboard" in response.data
+    assert b"Data workspace" in response.data
+    assert b"Clean your data" in response.data
+    assert b"Dashboard builder" in response.data
+    assert b"Continue with Google" in response.data
+    assert b"Privacy and security" in response.data
+    assert b"Troubleshooting" in response.data
+
+
 def test_workspace_page_loads(client):
     response = client.get("/app")
     assert response.status_code == 200
