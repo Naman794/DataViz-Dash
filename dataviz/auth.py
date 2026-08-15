@@ -28,6 +28,30 @@ from .storage import Store
 
 bp = Blueprint("auth", __name__)
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+oauth = OAuth()
+
+
+def init_oauth(app):
+    oauth.init_app(app)
+    oauth.register(
+        name="google",
+        server_metadata_url=app.config["GOOGLE_DISCOVERY_URL"],
+        client_kwargs={"scope": "openid email profile"},
+    )
+
+
+def google_auth_enabled() -> bool:
+    return bool(
+        current_app.config.get("GOOGLE_CLIENT_ID")
+        and current_app.config.get("GOOGLE_CLIENT_SECRET")
+    )
+
+
+def google_redirect_uri() -> str:
+    return current_app.config.get("GOOGLE_REDIRECT_URI") or url_for(
+        "auth.google_callback", _external=True
+    )
+
 
 
 def current_user():
