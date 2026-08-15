@@ -162,6 +162,9 @@ p { color: var(--muted); line-height: 1.6; }
 .plan-badge { border-radius: 999px; padding: 6px 10px; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .plan-badge.free { background: #eef0f5; color: #596176; }
 .plan-badge.pro { background: #e6fbf7; color: #0c806f; }
+.plan-badge.business { background: #e9eefb; color: #3156a3; }
+.plan-badge.agency { background: #f2ebfc; color: #6941a5; }
+.plan-badge.enterprise, .plan-badge.government { background: #edf0ef; color: #303735; }
 .flash-stack { display: grid; gap: 8px; margin-top: 18px; }
 .flash { border: 1px solid #cfeee8; border-radius: 10px; background: #eafaf7; color: #126e61; padding: 11px 14px; }
 .flash.error { border-color: #f2cdd3; background: #fff0f3; color: #9b3141; }
@@ -276,7 +279,8 @@ tr:hover td { background: #f5f7f5; }
 .account-actions .button { text-decoration: none; }
 .pricing-hero { max-width: 720px; margin: 62px auto 35px; text-align: center; }
 .pricing-hero h1 { margin: 8px 0 10px; font-size: clamp(2rem, 5vw, 3.2rem); }
-.pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: stretch; }
+.pricing-shell { width: min(1180px, calc(100% - 40px)); }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: stretch; }
 .price-card { position: relative; border: 1px solid var(--line); border-radius: 22px; background: #fff; padding: 32px; box-shadow: var(--shadow); }
 .price-card.featured { border-color: #9dbab4; background: linear-gradient(145deg, #fff, #eef4f1); }
 .price-card.current { box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow); }
@@ -286,11 +290,14 @@ tr:hover td { background: #f5f7f5; }
 .feature-list { display: grid; min-height: 285px; gap: 12px; margin: 24px 0; padding: 0; list-style: none; }
 .feature-list li::before { content: "✓"; margin-right: 10px; color: var(--teal); font-weight: 800; }
 .coming-soon { position: absolute; top: 20px; right: 20px; border-radius: 999px; background: var(--primary); color: #fff; padding: 6px 9px; font-size: .65rem; font-weight: 800; letter-spacing: .08em; }
+.coming-soon.secondary-label { background: #e8ecea; color: #4f5955; }
+.enterprise-card { background: linear-gradient(145deg, #fff, #f5f7f6); }
 .disabled-button { display: block; cursor: default; text-align: center; opacity: .65; }
 .centered-button { display: block; text-align: center; text-decoration: none; }
 .preview-note { margin: 25px auto 0; text-align: center; font-size: .86rem; }
 
 @media (max-width: 1120px) {
+  .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cleaning-grid { grid-template-columns: 1fr 1fr; }
   .cleaning-grid .panel:first-child { grid-column: 1 / -1; }
   .saved-grid { grid-template-columns: repeat(2, 1fr); }

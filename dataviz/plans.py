@@ -2,6 +2,57 @@
 
 from flask import current_app
 
+PRICING_CATALOG = (
+    {
+        "name": "free",
+        "label": "Free",
+        "positioning": "Individual experimentation",
+        "price": "₹0",
+        "price_note": "forever",
+        "availability": "available",
+    },
+    {
+        "name": "pro",
+        "label": "Pro",
+        "positioning": "Freelancer / analyst",
+        "price": "₹499",
+        "price_note": "per month",
+        "availability": "coming soon",
+    },
+    {
+        "name": "business",
+        "label": "Business",
+        "positioning": "Teams + larger usage",
+        "price": "₹1,999–₹2,999",
+        "price_note": "per month",
+        "availability": "planned",
+    },
+    {
+        "name": "agency",
+        "label": "Agency",
+        "positioning": "Multiple clients / workspaces",
+        "price": "₹4,999–₹9,999",
+        "price_note": "per month",
+        "availability": "planned",
+    },
+    {
+        "name": "enterprise",
+        "label": "Enterprise",
+        "positioning": "SSO, private deployment, SLA",
+        "price": "Custom",
+        "price_note": "contact-led",
+        "availability": "planned",
+    },
+    {
+        "name": "government",
+        "label": "Government",
+        "positioning": "Private/on-prem deployment + support",
+        "price": "Custom annual contract",
+        "price_note": "contact-led",
+        "availability": "planned",
+    },
+)
+
 
 def resolve_plan(user=None) -> dict:
     """Return server-enforced limits for the current account plan."""

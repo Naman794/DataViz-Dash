@@ -61,7 +61,7 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 - Automatic preservation of uploaded filenames
 - Field profiling, date grouping, sorting, Top-N, duplication, and formatting
 - Account-backed datasets, dashboards, usage reporting, and admin controls
-- Server-enforced Free and Pro capacity entitlements
+- Server-enforced Free and Pro capacity entitlements with a six-tier commercial roadmap
 - Expanded Free capacity and a 5 GB total-upload allowance for Pro accounts
 
 ## Core capabilities
@@ -89,28 +89,39 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 4. Arrange visuals across one or more sheet-style dashboard pages.
 5. Save the dashboard for future access or export.
 
-## Free and Pro models
+## Pricing models
+
+DataViz Dash now has a six-level India-focused commercial ladder:
+
+| Plan | Positioning | Price |
+| --- | --- | ---: |
+| Free | Individual experimentation | ₹0 |
+| Pro | Freelancer / analyst | ₹499/month |
+| Business | Teams + larger usage | ₹1,999–₹2,999/month |
+| Agency | Multiple clients/workspaces | ₹4,999–₹9,999/month |
+| Enterprise | SSO, private deployment, SLA | Custom |
+| Government | Private/on-prem deployment + support | Custom annual contract |
+
+Free and Pro are the current technical entitlement levels. Pro checkout remains
+disabled while billing is being integrated. Business, Agency, Enterprise, and
+Government are staged commercial packages; their collaboration, workspace,
+SSO, deployment, and SLA capabilities must be delivered before they are sold.
+
+### Current enforced capacity
 
 | Capability | Free | Pro |
 | --- | ---: | ---: |
-| Upcoming price | ₹0 | ₹499/month or ₹4,999/year |
 | Maximum upload per file | 50 MB | 100 MB |
 | Rows per dataset | 100,000 | 100,000 |
 | Total uploaded source data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
-| Visuals per dashboard | 4 | 12 |
-| Pages per dashboard | 3 | 20 |
+| Visuals per dashboard | 4 total | 12 total |
+| Pages per dashboard | 1 | 20 |
 | Chart data processed | 50,000 rows | 100,000 rows |
 | Basic data cleaning | Included | Included |
 | Cleaned CSV and chart PNG export | Included | Included |
 | Dashboard JSON and print/PDF export | Upgrade required | Included |
-
-The Pro price is a India launch price. Payment checkout is not live
-yet, so Pro remains a preview entitlement. At ₹499 per month, DataViz Dash enters
-below established business-intelligence tools while its connector,
-collaboration, and automation set is still growing. The ₹4,999 annual option
-provides roughly two months of savings.
 
 The **5 GB Pro allowance is total account storage measured from original upload
 sizes**. It is not a 5 GB single-file limit; individual Pro uploads remain capped
@@ -144,7 +155,7 @@ architecture.
 DataViz Dash is under active development. Version **v0.1** established the
 data-cleaning and dashboard MVP. Version **v0.2.1** adds the expanded builder,
 multi-page dashboards, instant dataset switching, refreshed UI, account usage,
-and the revised Free and Pro capacity model.
+and the revised capacity and six-tier pricing model.
 
 See the [release history](https://github.com/Naman794/DataViz-Dash/releases) and
 the [freemium product plan](docs/FREEMIUM_PLAN.md).
