@@ -2,7 +2,6 @@
 
 from flask import current_app
 
-
 PRICING_CATALOG = (
     {
         "name": "free",
