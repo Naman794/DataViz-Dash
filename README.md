@@ -16,6 +16,8 @@ results from one focused browser workspace.
 
 **Public URL:** [https://dataviz-dash.onrender.com/](https://dataviz-dash.onrender.com/)
 
+**Documentation:** [https://dataviz-dash.onrender.com/docs](https://dataviz-dash.onrender.com/docs)
+
 Create an account or use the available workspace to explore the complete upload,
 cleaning, visual-builder, dashboard, and export flow. The service is hosted on
 Render, so the first request may take a little longer if the free instance has
@@ -77,7 +79,7 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 - Month, quarter, and year grouping for date-based visuals
 - Chart PNG, dashboard JSON, and print-ready PDF exports
 - Anonymous browser-isolated workspaces
-- Email/password accounts with persistent workspace ownership
+- Email/password and Google accounts with persistent workspace ownership
 - Protected administrator console with activity and access controls
 - Responsive layouts for desktop and smaller screens
 
@@ -141,12 +143,40 @@ architecture.
 | Packaging | Docker and GitHub Container Registry workflow-ready |
 | Hosting | Render |
 
+## Google sign-in configuration
+
+Create a Google OAuth client with application type **Web application**.
+
+Authorized JavaScript origins:
+
+- `https://dataviz-dash.onrender.com`
+- `http://localhost:5000`
+
+Authorized redirect URIs:
+
+- `https://dataviz-dash.onrender.com/account/google/callback`
+- `http://localhost:5000/account/google/callback`
+
+Set these environment variables in Render rather than committing credentials:
+
+```env
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://dataviz-dash.onrender.com/account/google/callback
+SESSION_COOKIE_SECURE=true
+```
+
+The OAuth request uses only `openid email profile`. Verified Google emails can
+create a new account or link an existing account with the same email. OAuth
+tokens are not stored.
+
 ## Privacy and access
 
 - Uploaded datasets are never given public share links.
 - Anonymous data is isolated through a signed browser workspace identifier.
 - Registered users can claim an anonymous workspace and access it after signing in.
 - Passwords are stored as secure hashes rather than plaintext.
+- Google sign-in validates the OpenID Connect response and requires a verified email.
 - Plan limits are enforced by the server rather than only hidden in the interface.
 - Administrative membership and suspension changes are written to an audit trail.
 

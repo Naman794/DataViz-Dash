@@ -168,7 +168,9 @@ class Store:
     def count_dashboards(self, owner_id: str) -> int:
         return self.db.dashboards.count_documents({"owner_id": owner_id})
 
-    def create_user(self, email: str, password_hash: str):
+    def create_user(
+        self, email: str, password_hash: str, google_subject: str | None = None
+    ):
         now = utc_now()
         document = {
             "email": email,
@@ -181,6 +183,8 @@ class Store:
             "created_at": now,
             "updated_at": now,
         }
+        if google_subject:
+            document["google_subject"] = google_subject
         result = self.db.users.insert_one(document)
         document["_id"] = result.inserted_id
         return document
@@ -193,6 +197,20 @@ class Store:
 
     def get_user_by_email(self, email: str):
         return self.db.users.find_one({"email": email})
+
+    def get_user_by_google_subject(self, subject: str):
+        return self.db.users.find_one({"google_subject": subject})
+
+    def link_google_identity(self, user_id: str, subject: str):
+        object_id = self._object_id(user_id)
+        if object_id is None:
+            return None
+        now = utc_now()
+        return self.db.users.find_one_and_update(
+            {"_id": object_id},
+            {"$set": {"google_subject": subject, "updated_at": now}},
+            return_document=True,
+        )
 
     def record_login(self, user_id: str, event_type: str = "account.login"):
         object_id = self._object_id(user_id)

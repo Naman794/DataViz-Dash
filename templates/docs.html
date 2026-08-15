@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn every DataViz Dash feature, from uploading and cleaning spreadsheets to building, saving, and exporting dashboards.">
+  <title>Documentation · DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docs.css') }}">
+</head>
+<body class="docs-body">
+  <header class="docs-header">
+    <a class="brand" href="{{ url_for('main.landing') }}">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>DataViz <strong>Dash</strong></span>
+    </a>
+    <nav aria-label="Documentation navigation">
+      <a href="{{ url_for('main.landing') }}">Home</a>
+      <a href="{{ url_for('main.pricing') }}">Plans</a>
+      <a class="button primary compact" href="{{ url_for('main.index') }}">Open workspace</a>
+    </nav>
+  </header>
+
+  <div class="docs-shell">
+    <aside class="docs-sidebar">
+      <p class="eyebrow">DOCUMENTATION</p>
+      <h2>DataViz Dash guide</h2>
+      <nav aria-label="On this page">
+        <a href="#start">Quick start</a>
+        <a href="#workspace">Data workspace</a>
+        <a href="#cleaning">Clean your data</a>
+        <a href="#builder">Dashboard builder</a>
+        <a href="#visuals">Visual types</a>
+        <a href="#layout">Pages and layout</a>
+        <a href="#saving">Save and export</a>
+        <a href="#accounts">Accounts and Google</a>
+        <a href="#plans">Plans and limits</a>
+        <a href="#privacy">Privacy and security</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </nav>
+    </aside>
+
+    <main class="docs-content">
+      <section class="docs-hero" id="start">
+        <span class="eyebrow">GET STARTED</span>
+        <h1>Everything you need to build a dashboard</h1>
+        <p>DataViz Dash turns CSV and Excel spreadsheets into clean datasets and interactive dashboards without formulas or code.</p>
+        <div class="docs-callout">
+          <strong>Fastest way to learn</strong>
+          <p>Open the workspace and choose <b>Try sample dashboard</b>. A ready-made sales dataset and four-visual dashboard will be created for you.</p>
+          <a class="button primary" href="{{ url_for('main.index') }}">Try the sample dashboard</a>
+        </div>
+        <ol class="quick-steps">
+          <li><span>1</span><div><strong>Upload or try the sample</strong><p>Use CSV, XLS, or XLSX data. The original uploaded filename is kept.</p></div></li>
+          <li><span>2</span><div><strong>Review and clean</strong><p>Inspect rows and columns, then fix common spreadsheet issues.</p></div></li>
+          <li><span>3</span><div><strong>Build visuals</strong><p>Choose fields, calculations, chart types, sorting, and formatting.</p></div></li>
+          <li><span>4</span><div><strong>Arrange and save</strong><p>Drag, resize, save, reopen, and export your dashboard.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="docs-section" id="workspace">
+        <span class="docs-number">01</span>
+        <h2>Data workspace</h2>
+        <p>The Data workspace is where every analysis begins.</p>
+        <h3>Upload a spreadsheet</h3>
+        <ol>
+          <li>Open <a href="{{ url_for('main.index') }}">Data workspace</a>.</li>
+          <li>Drag a file into the upload area or select <b>Choose file</b>.</li>
+          <li>Wait for the upload to finish. The dataset loads automatically.</li>
+          <li>Review its row count, column count, field names, and preview table.</li>
+        </ol>
+        <div class="docs-note"><strong>Supported formats:</strong> CSV, XLS, and XLSX. Upload and row limits depend on your plan.</div>
+        <h3>Switch datasets</h3>
+        <p>Select any uploaded file from <b>Active dataset</b>. It loads immediately; there is no separate Open button.</p>
+        <h3>Download or delete</h3>
+        <p>Use <b>Download CSV</b> to download the current prepared dataset. Use <b>Delete</b> only when you no longer need the dataset; dashboards attached to deleted data cannot render correctly.</p>
+      </section>
+
+      <section class="docs-section" id="cleaning">
+        <span class="docs-number">02</span>
+        <h2>Clean your data</h2>
+        <p>Cleaning changes the stored working copy while keeping the workflow simple and formula-free.</p>
+        <div class="docs-feature-grid">
+          <article><h3>Rename columns</h3><p>Give unclear headings meaningful names before using them in a visual.</p></article>
+          <article><h3>Remove columns</h3><p>Exclude fields that are irrelevant, sensitive, or not useful for analysis.</p></article>
+          <article><h3>Handle missing values</h3><p>Fill missing cells with a selected value or remove incomplete rows.</p></article>
+          <article><h3>Remove duplicates</h3><p>Delete repeated records that could inflate totals and counts.</p></article>
+          <article><h3>Remove empty rows</h3><p>Drop rows that contain no usable values.</p></article>
+          <article><h3>Preview before moving on</h3><p>Confirm the cleaned row count and field names before opening Builder.</p></article>
+        </div>
+      </section>
+
+      <section class="docs-section" id="builder">
+        <span class="docs-number">03</span>
+        <h2>Dashboard builder</h2>
+        <p>The Builder uses a fixed 16:9 dashboard canvas with a compact view rail and a contextual inspector.</p>
+        <ol>
+          <li>Open <b>Builder</b> and select a dataset.</li>
+          <li>Select <b>Add visual</b>.</li>
+          <li>Choose a visual type.</li>
+          <li>In <b>Data</b>, select the category/X-axis and value/Y-axis fields.</li>
+          <li>In <b>Build</b>, choose aggregation, sorting, Top-N, or date grouping when available.</li>
+          <li>In <b>Format</b>, adjust the visual title and presentation settings.</li>
+          <li>Save the visual, then drag and resize it on the canvas.</li>
+        </ol>
+        <h3>Field profile</h3>
+        <p>Select a dataset field to inspect its type, missing values, unique values, and useful summary statistics before choosing it for a chart.</p>
+        <h3>Calculations</h3>
+        <p>Available aggregations include count, sum, average, minimum, maximum, and unaggregated values where the selected visual supports them.</p>
+        <h3>Date grouping</h3>
+        <p>Date-based visuals can group values by month, quarter, or year. Make sure the selected field contains recognisable dates.</p>
+      </section>
+
+      <section class="docs-section" id="visuals">
+        <span class="docs-number">04</span>
+        <h2>Visual types</h2>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Visual</th><th>Best used for</th></tr></thead>
+            <tbody>
+              <tr><td>Bar</td><td>Comparing categories such as revenue by region.</td></tr>
+              <tr><td>Line</td><td>Showing trends across dates or ordered periods.</td></tr>
+              <tr><td>Area</td><td>Showing a trend while emphasising total volume.</td></tr>
+              <tr><td>Pie</td><td>Showing a small number of parts within a whole.</td></tr>
+              <tr><td>Scatter</td><td>Finding relationships between two numeric fields.</td></tr>
+              <tr><td>Histogram</td><td>Understanding the distribution of one numeric field.</td></tr>
+              <tr><td>KPI</td><td>Displaying one important total, average, minimum, or maximum.</td></tr>
+              <tr><td>Table</td><td>Showing detailed values or category summaries.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="docs-note"><strong>Tip:</strong> Use KPI cards for headline numbers, bar charts for comparison, and line charts for time. A clear dashboard usually needs fewer, stronger visuals.</div>
+      </section>
+
+      <section class="docs-section" id="layout">
+        <span class="docs-number">05</span>
+        <h2>Pages, layout, and canvas controls</h2>
+        <h3>Move and resize</h3>
+        <p>Drag visuals to reposition them. Use the resize handle to change width and height. The 12-column grid keeps the layout aligned.</p>
+        <h3>Dashboard pages</h3>
+        <p>Free dashboards contain one page. Pro supports multiple sheet-style pages, with the visual allowance counted across the complete dashboard rather than separately on each page.</p>
+        <h3>Canvas controls</h3>
+        <ul>
+          <li><b>Grid:</b> show or hide layout guidance.</li>
+          <li><b>Fit page:</b> fit the entire 16:9 page into the available area.</li>
+          <li><b>Fit width:</b> use the available horizontal space.</li>
+          <li><b>Actual size:</b> return to 100% scale.</li>
+          <li><b>Zoom:</b> increase or decrease canvas scale.</li>
+          <li><b>Focus:</b> hide surrounding controls for more working space. Press Escape to exit.</li>
+          <li><b>Undo/Redo:</b> reverse or restore recent page and layout changes.</li>
+        </ul>
+      </section>
+
+      <section class="docs-section" id="saving">
+        <span class="docs-number">06</span>
+        <h2>Save, reopen, and export</h2>
+        <h3>Save a dashboard</h3>
+        <p>Give the dashboard a clear title and save it. Signed-in dashboards remain attached to your account. Anonymous dashboards remain isolated to the current browser workspace.</p>
+        <h3>Open saved work</h3>
+        <p>Open <b>Saved dashboards</b> from the Builder rail. Select a dashboard to restore its dataset, pages, visuals, and layout.</p>
+        <h3>Exports</h3>
+        <ul>
+          <li><b>Cleaned CSV:</b> available from Data workspace.</li>
+          <li><b>Chart PNG:</b> export an individual visual.</li>
+          <li><b>Dashboard JSON:</b> Pro export of the dashboard definition.</li>
+          <li><b>Print/PDF:</b> Pro presentation-ready browser print flow.</li>
+        </ul>
+      </section>
+
+      <section class="docs-section" id="accounts">
+        <span class="docs-number">07</span>
+        <h2>Accounts and Google sign-in</h2>
+        <p>You can explore anonymously, register with email and password, or continue with Google when Google authentication is enabled.</p>
+        <h3>Continue with Google</h3>
+        <ol>
+          <li>Open <a href="{{ url_for('auth.account') }}">Account</a>.</li>
+          <li>Select <b>Continue with Google</b>.</li>
+          <li>Choose a Google account and approve the basic profile request.</li>
+          <li>DataViz Dash uses the verified email to create an account or securely link an existing account with the same email.</li>
+          <li>Your current anonymous workspace is moved into the signed-in account.</li>
+        </ol>
+        <div class="docs-note"><strong>Requested Google access:</strong> OpenID identity, email, and basic profile. DataViz Dash does not request Google Drive or spreadsheet access.</div>
+        <h3>Email and password</h3>
+        <p>Passwords must contain 10–128 characters and are stored as secure hashes. Signing in restores the datasets and dashboards owned by that account.</p>
+      </section>
+
+      <section class="docs-section" id="plans">
+        <span class="docs-number">08</span>
+        <h2>Plans and current limits</h2>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Capability</th><th>Free</th><th>Pro</th></tr></thead>
+            <tbody>
+              <tr><td>Price</td><td>₹0</td><td>₹499/month</td></tr>
+              <tr><td>Upload per file</td><td>50 MB</td><td>100 MB</td></tr>
+              <tr><td>Rows per dataset</td><td>100,000</td><td>100,000</td></tr>
+              <tr><td>Total uploaded data</td><td>150 MB</td><td>5 GB</td></tr>
+              <tr><td>Saved datasets</td><td>3</td><td>25</td></tr>
+              <tr><td>Saved dashboards</td><td>2</td><td>25</td></tr>
+              <tr><td>Visuals per dashboard</td><td>4 total</td><td>12 total</td></tr>
+              <tr><td>Pages per dashboard</td><td>1</td><td>20</td></tr>
+              <tr><td>Dashboard JSON/PDF export</td><td>Upgrade required</td><td>Included</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Business, Agency, Enterprise, and Government packages are part of the commercial roadmap. Team workspaces, client separation, SSO, private deployment, and SLA capabilities are not active until their product work is complete.</p>
+        <a class="text-link" href="{{ url_for('main.pricing') }}">Compare all plans →</a>
+      </section>
+
+      <section class="docs-section" id="privacy">
+        <span class="docs-number">09</span>
+        <h2>Privacy and security</h2>
+        <ul>
+          <li>Uploaded datasets do not receive public share links.</li>
+          <li>Anonymous workspaces are isolated using a signed browser session.</li>
+          <li>Registered workspaces are owned by the signed-in account.</li>
+          <li>Plan limits are enforced by the server, not only hidden in the interface.</li>
+          <li>Google access and refresh tokens are not stored by the application.</li>
+          <li>Google sign-in accepts only a verified email from a validated OpenID Connect response.</li>
+          <li>Administrative membership and account-status changes are recorded.</li>
+        </ul>
+      </section>
+
+      <section class="docs-section" id="troubleshooting">
+        <span class="docs-number">10</span>
+        <h2>Troubleshooting</h2>
+        <div class="faq-list">
+          <details><summary>My file will not upload</summary><p>Confirm it is CSV, XLS, or XLSX and below your plan’s file and row limits. Large or malformed spreadsheets should be simplified before upload.</p></details>
+          <details><summary>A field is missing from Builder</summary><p>Return to Data workspace, confirm the correct dataset is active, and check whether the field was removed during cleaning.</p></details>
+          <details><summary>A chart is empty</summary><p>Check that the selected fields contain compatible values. Use a numeric Y-axis for sum or average, and confirm date values are valid before using date grouping.</p></details>
+          <details><summary>I cannot add another page or visual</summary><p>You have reached the dashboard limit for your plan. Free includes one page and four visuals total.</p></details>
+          <details><summary>Google sign-in is unavailable</summary><p>The deployment owner must configure the Google Client ID, Client Secret, and exact callback URL. Email/password sign-in remains available.</p></details>
+          <details><summary>The live site is slow on first open</summary><p>The Render service may be waking after inactivity. Wait briefly and refresh once.</p></details>
+        </div>
+      </section>
+
+      <section class="docs-cta">
+        <h2>Ready to build?</h2>
+        <p>Start with the sample dashboard, then replace it with your own spreadsheet.</p>
+        <a class="button primary" href="{{ url_for('main.index') }}">Open DataViz Dash</a>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

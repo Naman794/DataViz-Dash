@@ -42,6 +42,13 @@ class Config:
     PRO_STORAGE_MB = int(os.getenv("PRO_STORAGE_MB", "5120"))
     PRO_PAGE_LIMIT = int(os.getenv("PRO_PAGE_LIMIT", "20"))
     ADMIN_EMAILS = comma_separated_emails(os.getenv("ADMIN_EMAILS", ""))
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
+    GOOGLE_DISCOVERY_URL = os.getenv(
+        "GOOGLE_DISCOVERY_URL",
+        "https://accounts.google.com/.well-known/openid-configuration",
+    )
     JSON_SORT_KEYS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

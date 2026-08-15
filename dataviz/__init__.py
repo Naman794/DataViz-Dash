@@ -8,6 +8,7 @@ from pymongo.errors import PyMongoError
 
 from .admin import bp as admin_bp
 from .auth import bp as auth_bp
+from .auth import init_oauth
 from .config import Config
 from .database import init_database
 from .routes import bp
@@ -24,6 +25,7 @@ def create_app(config_overrides=None):
         app.config.update(config_overrides)
 
     init_database(app)
+    init_oauth(app)
     app.register_blueprint(bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
