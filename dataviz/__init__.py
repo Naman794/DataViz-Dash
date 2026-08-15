@@ -7,7 +7,8 @@ from flask import Flask, jsonify
 from pymongo.errors import PyMongoError
 
 from .admin import bp as admin_bp
-from .auth import bp as auth_bp, init_oauth
+from .auth import bp as auth_bp
+from .auth import init_oauth
 from .config import Config
 from .database import init_database
 from .routes import bp
