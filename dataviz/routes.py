@@ -29,7 +29,7 @@ from .demo import (
     sample_dashboard_payload,
     sample_frame,
 )
-from .plans import resolve_plan
+from .plans import PRICING_CATALOG, resolve_plan
 from .storage import Store
 from .tabular import DataLimitError, DataValidationError, clean_frame, parse_upload
 
@@ -91,6 +91,18 @@ def plan_limit_error(message, feature):
 
 def count_label(count, singular, plural=None):
     return f"{count} {singular if count == 1 else (plural or singular + 's')}"
+
+
+def submitted_chart_count(payload: dict) -> int:
+    pages = payload.get("pages")
+    if isinstance(pages, list):
+        return sum(
+            len(page.get("charts", []))
+            for page in pages
+            if isinstance(page, dict) and isinstance(page.get("charts", []), list)
+        )
+    charts = payload.get("charts")
+    return len(charts) if isinstance(charts, list) else 0
 
 
 def uploaded_file_size(upload) -> int:
@@ -157,6 +169,7 @@ def pricing():
         plan=active_plan(),
         free_plan=resolve_plan(),
         pro_plan=resolve_plan({"plan": "pro"}),
+        pricing_catalog=PRICING_CATALOG,
     )
 
 
@@ -412,11 +425,11 @@ def create_dashboard():
             f"{count_label(plan['max_pages'], 'dashboard page')} per dashboard.",
             "dashboard_pages",
         )
-    charts = raw_payload.get("charts")
-    if isinstance(charts, list) and len(charts) > plan["max_charts"]:
+    if submitted_chart_count(raw_payload) > plan["max_charts"]:
         return plan_limit_error(
             f"Your {plan['label']} plan supports "
-            f"{count_label(plan['max_charts'], 'chart')} per dashboard.",
+            f"{count_label(plan['max_charts'], 'visual')} per dashboard "
+            "across all pages.",
             "charts_per_dashboard",
         )
     payload, validation_error = validate_dashboard_payload(raw_payload)
@@ -449,11 +462,11 @@ def update_dashboard(dashboard_id):
             f"{count_label(plan['max_pages'], 'dashboard page')} per dashboard.",
             "dashboard_pages",
         )
-    charts = raw_payload.get("charts")
-    if isinstance(charts, list) and len(charts) > plan["max_charts"]:
+    if submitted_chart_count(raw_payload) > plan["max_charts"]:
         return plan_limit_error(
             f"Your {plan['label']} plan supports "
-            f"{count_label(plan['max_charts'], 'chart')} per dashboard.",
+            f"{count_label(plan['max_charts'], 'visual')} per dashboard "
+            "across all pages.",
             "charts_per_dashboard",
         )
     payload, validation_error = validate_dashboard_payload(raw_payload)

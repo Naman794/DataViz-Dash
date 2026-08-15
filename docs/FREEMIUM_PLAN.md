@@ -1,5 +1,21 @@
 # DataViz Dash freemium plan
 
+## Commercial pricing ladder
+
+| Plan | Positioning | Price | Delivery status |
+| --- | --- | ---: | --- |
+| Free | Individual experimentation | ₹0 | Available |
+| Pro | Freelancer / analyst | ₹499/month | Entitlements implemented; checkout pending |
+| Business | Teams + larger usage | ₹1,999–₹2,999/month | Planned |
+| Agency | Multiple clients/workspaces | ₹4,999–₹9,999/month | Planned |
+| Enterprise | SSO, private deployment, SLA | Custom | Contact-led roadmap |
+| Government | Private/on-prem deployment + support | Custom annual contract | Contact-led roadmap |
+
+The pricing page may market the complete ladder, but it must distinguish current
+entitlements from roadmap capabilities. Business and above must not be activated
+until their team/workspace, security, deployment, and support commitments are
+implemented and operationally supportable.
+
 ## Recommended limits
 
 The product should keep its core cleaning workflow useful on the Free plan while
@@ -14,7 +30,7 @@ charging for larger workloads, persistence, and professional exports.
 | Saved datasets | 3 | 25 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 | 12 |
-| Dashboard pages | 3 | 20 |
+| Dashboard pages | 1 | 20 |
 | Chart data | First 50,000 rows | Up to 100,000 rows |
 | Basic cleaning | Included | Included |
 | Cleaned CSV download | Included | Included |
@@ -60,7 +76,7 @@ Suggested MongoDB collections:
 
 ## Payment lifecycle
 
-1. User selects Pro on `/pricing`.
+1. User selects a self-serve paid plan on `/pricing`, starting with Pro.
 2. Server creates a hosted checkout session.
 3. Payment provider redirects back to a success or cancellation page.
 4. A signed webhook updates the subscription in MongoDB.
@@ -75,8 +91,10 @@ the source of truth. Webhook processing must verify signatures and be idempotent
 2. **Entitlements:** add Free and Pro plan definitions plus server-side checks. *(Implemented)*
 3. **Identity:** add email-based accounts and let users claim an anonymous workspace. *(Implemented)*
 4. **Paywall:** add `/pricing`, upgrade prompts, and plan-limit messaging. *(Implemented without checkout)*
-5. **Billing:** connect checkout, verified webhooks, subscription management, and
-   cancellation handling.
+5. **Billing:** connect Pro checkout, verified webhooks, subscription management, and cancellation handling.
+6. **Teams:** implement Business memberships, roles, shared workspaces, and higher quotas.
+7. **Multi-workspace:** implement Agency client isolation and account-level administration.
+8. **Private deployment:** implement Enterprise/Government SSO, deployment, security, SLA, and support workflows.
 
 Real paid access should not launch without identity. A browser cookie can be
 cleared or copied, so it cannot safely own a subscription.
