@@ -1,3 +1,34 @@
+# DataViz Dash V 0.3.0
+
+Connected spreadsheet sources arrive in DataViz Dash.
+
+## Highlights
+
+- Connect a publicly viewable Google Sheet using its normal sharing URL.
+- Detect and retain the selected worksheet tab from the URL `gid`.
+- Refresh a connected dataset without uploading the spreadsheet again.
+- Keep existing dashboards attached to the same dataset after refresh.
+- Display the last successful sync, worksheet identifier, and refresh errors.
+- Preserve the last-known-good rows when access, validation, or quota checks fail.
+- Enforce one connected Google Sheet on Free and five on Pro.
+- Bound every external download by an HTTPS Google hostname, timeout, byte limit,
+  row limit, storage quota, and owner check.
+- Keep Google sign-in permissions separate from public Sheet imports; no Drive
+  scope, access token, or refresh token is stored for this connector.
+
+## Quality
+
+- Automated coverage for URL validation, bounded CSV retrieval, connection
+  limits, refresh replacement, and failed-refresh recovery.
+- Full compilation, Ruff, JavaScript syntax, and Pytest verification.
+
+## Next milestone
+
+Private Google Sheet authorization and hourly refresh through a dedicated Render
+Cron Job remain follow-up work.
+
+---
+
 # DataViz Dash V 0.1
 
 The first working local release of DataViz Dash.

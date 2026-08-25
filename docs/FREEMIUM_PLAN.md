@@ -26,8 +26,10 @@ charging for larger workloads, persistence, and professional exports.
 | File types | CSV, XLS, XLSX | CSV, XLS, XLSX |
 | Maximum upload | 50 MB | 100 MB |
 | Maximum rows per dataset | 100,000 | 100,000 |
-| Total uploaded data | 150 MB | 5 GB |
+| Total source data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
+| Connected public Google Sheets | 1 | 5 |
+| Google Sheet refresh | Manual | Manual; hourly planned |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 | 12 |
 | Dashboard pages | 1 | 20 |
@@ -40,8 +42,8 @@ charging for larger workloads, persistence, and professional exports.
 | Workspace identity | Anonymous or signed-in | Signed-in account |
 | Data retention | Browser or account workspace | Persistent account workspace |
 
-The Pro 5 GB allowance is a total account quota measured from uploaded source
-sizes. It is not a 5 GB single-file limit. The synchronous Flask and Pandas
+The Pro 5 GB allowance is a total account quota measured from uploaded or
+connected source sizes. It is not a 5 GB single-file limit. The synchronous Flask and Pandas
 pipeline currently caps one upload at 100 MB; multi-gigabyte individual files
 will require direct object-storage uploads and asynchronous, chunked processing.
 

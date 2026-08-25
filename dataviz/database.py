@@ -31,6 +31,9 @@ def init_database(app):
         database.datasets.create_index(
             [("owner_id", ASCENDING), ("updated_at", DESCENDING)]
         )
+        database.datasets.create_index(
+            [("owner_id", ASCENDING), ("source_type", ASCENDING)]
+        )
         database.dataset_rows.create_index(
             [("dataset_id", ASCENDING), ("position", ASCENDING)], unique=True
         )

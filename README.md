@@ -3,12 +3,13 @@
 > Turn spreadsheets into clean, interactive dashboards without writing code.
 
 [![Live demo](https://img.shields.io/badge/Live_demo-Open_DataViz_Dash-111111?style=for-the-badge)](https://dataviz-dash.onrender.com/)
-![Release](https://img.shields.io/badge/release-v0.2.1-0f766e?style=for-the-badge)
+![Release](https://img.shields.io/badge/release-v0.3.0-0f766e?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-Flask-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache_2.0-555555?style=for-the-badge)
 
 DataViz Dash is a no-code spreadsheet analytics workspace created by
-**[Naman Sinha](https://github.com/Naman794)**. Upload CSV or Excel files,
+**[Naman Sinha](https://github.com/Naman794)**. Upload CSV or Excel files or
+connect a publicly viewable Google Sheet,
 prepare the data, build multi-page dashboards, and export presentation-ready
 results from one focused browser workspace.
 
@@ -33,9 +34,10 @@ The public landing page explains the workflow, feature set, and available plans.
 
 ### 2. Inside the app
 
-Upload CSV, XLS, or XLSX data, retain the original filename, switch datasets
-instantly, inspect rows and columns, apply cleaning rules, and download the
-prepared data.
+Upload CSV, XLS, or XLSX data, retain the original filename, or connect a
+publicly viewable Google Sheet and refresh it on demand. Switch datasets
+instantly, inspect rows and columns, apply cleaning rules, and download prepared
+data.
 
 ![DataViz Dash data workspace](docs/images/data-workspace-v0.2.png)
 
@@ -46,10 +48,17 @@ page tabs, zoom controls, and drag-and-resize grid to create reusable dashboards
 
 ![DataViz Dash dashboard builder](docs/images/dashboard-builder-v0.2.png)
 
-## Latest release — v0.2.1
+## Latest release — v0.3.0
 
-Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
+Version **v0.3.0** adds connected spreadsheet sources to the broader dashboard workspace:
 
+- Public Google Sheets import through a validated sharing link
+- Automatic worksheet `gid` detection from the pasted link
+- One-click manual refresh without re-uploading the spreadsheet
+- Last-refresh status and failure details in the Data workspace
+- Last-known-good dataset preservation when Google access or parsing fails
+- One connected Google Sheet on Free and up to five on Pro
+- Server-side source-size, row, storage, ownership, and connection enforcement
 - One-click sample dataset and ready-made dashboard for first-time visitors
 - Deployment health and version endpoints for release monitoring
 - Privacy-safe public product screenshots
@@ -69,6 +78,7 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 ## Core capabilities
 
 - CSV, XLS, and XLSX upload and preview
+- Public Google Sheets connection and on-demand refresh
 - Column renaming and removal
 - Missing-value replacement or incomplete-row deletion
 - Duplicate and completely empty-row removal
@@ -85,7 +95,7 @@ Version **v0.2.1** expands the original MVP into a broader dashboard workspace:
 
 ## Product flow
 
-1. Try the bundled sample dashboard or upload your own spreadsheet.
+1. Try the sample, upload a spreadsheet, or connect a public Google Sheet.
 2. Apply cleaning rules to prepare the dataset for analysis.
 3. Open the builder and choose fields, aggregations, and visual types.
 4. Arrange visuals across one or more sheet-style dashboard pages.
@@ -117,6 +127,7 @@ SSO, deployment, and SLA capabilities must be delivered before they are sold.
 | Rows per dataset | 100,000 | 100,000 |
 | Total uploaded source data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
+| Connected Google Sheets | 1 | 5 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 total | 12 total |
 | Pages per dashboard | 1 | 20 |
@@ -135,7 +146,7 @@ architecture.
 | Layer | Technology |
 | --- | --- |
 | Application | Python and Flask |
-| Data processing | Pandas, OpenPyXL, and xlrd |
+| Data processing | Pandas, OpenPyXL, xlrd, and Google Sheets CSV export |
 | Database | MongoDB and PyMongo |
 | Visualisation | Plotly.js |
 | Interface | HTML, CSS, and JavaScript |
@@ -170,9 +181,16 @@ The OAuth request uses only `openid email profile`. Verified Google emails can
 create a new account or link an existing account with the same email. OAuth
 tokens are not stored.
 
+Google sign-in and Google Sheet imports are separate. The current Sheet
+connector reads only a link that the user has already made publicly viewable;
+it does not request Drive access or store Google OAuth tokens. Private Sheet
+authorization and scheduled hourly refresh are planned follow-up work.
+
 ## Privacy and access
 
 - Uploaded datasets are never given public share links.
+- A connected Google Sheet must already use “Anyone with the link” access; only
+  its canonical Sheet URL and worksheet identifier are stored with the dataset.
 - Anonymous data is isolated through a signed browser workspace identifier.
 - Registered users can claim an anonymous workspace and access it after signing in.
 - Passwords are stored as secure hashes rather than plaintext.
@@ -183,9 +201,10 @@ tokens are not stored.
 ## Project status
 
 DataViz Dash is under active development. Version **v0.1** established the
-data-cleaning and dashboard MVP. Version **v0.2.1** adds the expanded builder,
+data-cleaning and dashboard MVP. Version **v0.2.1** added the expanded builder,
 multi-page dashboards, instant dataset switching, refreshed UI, account usage,
-and the revised capacity and six-tier pricing model.
+and revised pricing. Version **v0.3.0** introduces connected Google Sheets with
+safe manual refresh and plan-based limits.
 
 See the [release history](https://github.com/Naman794/DataViz-Dash/releases) and
 the [freemium product plan](docs/FREEMIUM_PLAN.md).

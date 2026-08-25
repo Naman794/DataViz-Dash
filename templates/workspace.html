@@ -93,17 +93,32 @@
           <span class="step-badge">Step 1 of 2</span>
         </div>
 
-        <div class="upload-card" id="upload-card">
-          <input id="file-input" type="file" accept=".csv,.xls,.xlsx" hidden>
-          <div class="upload-icon" aria-hidden="true">⇧</div>
-          <h3>Drop your spreadsheet here</h3>
-          <p>CSV, XLS or XLSX · maximum {{ max_upload_mb }} MB and {{ "{:,}".format(max_dataset_rows) }} rows · original filename kept automatically</p>
-          <div class="upload-actions">
-            <button class="button primary" id="choose-file-button">Choose file</button>
-            <button class="button tertiary" id="sample-data-button">Try sample dashboard</button>
+        <div class="source-grid">
+          <div class="upload-card source-card" id="upload-card">
+            <input id="file-input" type="file" accept=".csv,.xls,.xlsx" hidden>
+            <span class="source-label">OPTION 1</span>
+            <div class="upload-icon" aria-hidden="true">⇧</div>
+            <h3>Upload a spreadsheet</h3>
+            <p>CSV, XLS or XLSX · maximum {{ max_upload_mb }} MB and {{ "{:,}".format(max_dataset_rows) }} rows · original filename kept automatically</p>
+            <div class="upload-actions">
+              <button class="button primary" id="choose-file-button">Choose file</button>
+              <button class="button tertiary" id="sample-data-button">Try sample</button>
+            </div>
+            <div class="upload-progress hidden" id="upload-progress"><span></span></div>
           </div>
-          <small class="upload-helper">No file needed — open a ready-made sales dashboard in one click.</small>
-          <div class="upload-progress hidden" id="upload-progress"><span></span></div>
+
+          <form class="source-card sheet-card" id="google-sheet-form">
+            <span class="source-label">OPTION 2</span>
+            <div class="upload-icon sheet-icon" aria-hidden="true">▦</div>
+            <h3>Connect Google Sheet</h3>
+            <p>Import a worksheet from its sharing link and refresh it without uploading again.</p>
+            <label class="field sheet-link-field">
+              <span>Google Sheets link</span>
+              <input id="google-sheet-url" type="url" required autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…">
+            </label>
+            <button class="button primary" id="connect-google-sheet-button" type="submit">Connect sheet</button>
+            <small class="upload-helper">The selected tab is read from the link. General access must be “Anyone with the link”.</small>
+          </form>
         </div>
 
         <div class="dataset-toolbar">
@@ -113,11 +128,13 @@
               <option value="">Upload a dataset to begin</option>
             </select>
           </label>
+          <button class="button tertiary hidden" id="refresh-sheet-button">Refresh now</button>
           <button class="button secondary" id="download-data-button" disabled>Download CSV</button>
           <button class="button danger-ghost" id="delete-data-button" disabled>Delete</button>
         </div>
 
         <div id="dataset-workspace" class="hidden">
+          <div class="source-status hidden" id="dataset-source-status"></div>
           <div class="stat-grid">
             <article class="stat-card">
               <span>Rows</span><strong id="row-count">0</strong><small>available for analysis</small>
