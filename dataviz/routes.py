@@ -29,6 +29,7 @@ from .demo import (
     sample_dashboard_payload,
     sample_frame,
 )
+from .google_sheets import GoogleSheetError, fetch_google_sheet
 from .plans import PRICING_CATALOG, resolve_plan
 from .storage import Store
 from .tabular import DataLimitError, DataValidationError, clean_frame, parse_upload
@@ -335,6 +336,141 @@ def upload_dataset():
         dataset=dataset,
         rows=repository.get_rows(stored_dataset, limit=100),
     ), 201
+
+
+@bp.post("/api/google-sheets")
+def connect_google_sheet():
+    plan = active_plan()
+    repository = store()
+    if repository.count_datasets(owner_id()) >= plan["max_datasets"]:
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_datasets'], 'saved dataset')}.",
+            "saved_datasets",
+        )
+    if (
+        repository.count_google_sheet_connections(owner_id())
+        >= plan["max_sheet_connections"]
+    ):
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{count_label(plan['max_sheet_connections'], 'connected Google Sheet')}.",
+            "google_sheet_connections",
+        )
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        snapshot = fetch_google_sheet(
+            payload.get("url", ""),
+            max_rows=plan["max_dataset_rows"],
+            max_bytes=plan["max_upload_mb"] * 1024 * 1024,
+        )
+    except DataLimitError as exc:
+        if plan["name"] == "free":
+            return plan_limit_error(str(exc), exc.feature)
+        return error(str(exc))
+    except GoogleSheetError as exc:
+        return error(str(exc))
+
+    max_storage_bytes = plan["max_storage_mb"] * 1024 * 1024
+    if (
+        repository.total_source_bytes(owner_id()) + snapshot.source_size_bytes
+        > max_storage_bytes
+    ):
+        return plan_limit_error(
+            f"Your {plan['label']} plan supports "
+            f"{storage_limit_label(plan['max_storage_mb'])} of source data.",
+            "storage_capacity",
+        )
+    try:
+        dataset = repository.create_dataset(
+            owner_id(),
+            snapshot.filename,
+            snapshot.frame,
+            source_size_bytes=snapshot.source_size_bytes,
+            source_metadata={
+                "source_url": snapshot.reference.canonical_url,
+                "spreadsheet_id": snapshot.reference.spreadsheet_id,
+                "sheet_gid": snapshot.reference.sheet_gid,
+            },
+        )
+    except DataValidationError as exc:
+        return error(str(exc))
+    stored_dataset = repository.get_dataset(owner_id(), dataset["id"])
+    record_account_activity(
+        "google_sheet.connected",
+        {
+            "dataset_id": dataset["id"],
+            "sheet_gid": snapshot.reference.sheet_gid,
+            "row_count": dataset["row_count"],
+        },
+    )
+    return (
+        jsonify(
+            dataset=dataset,
+            rows=repository.get_rows(stored_dataset, limit=100),
+        ),
+        201,
+    )
+
+
+@bp.post("/api/datasets/<dataset_id>/refresh")
+def refresh_google_sheet(dataset_id):
+    repository = store()
+    dataset = repository.get_dataset(owner_id(), dataset_id)
+    if dataset is None:
+        return error("Dataset not found.", 404)
+    if dataset.get("source_type") != "google_sheet":
+        return error("Only connected Google Sheets can be refreshed.")
+
+    plan = active_plan()
+    try:
+        snapshot = fetch_google_sheet(
+            dataset.get("source_url", ""),
+            max_rows=plan["max_dataset_rows"],
+            max_bytes=plan["max_upload_mb"] * 1024 * 1024,
+        )
+    except DataLimitError as exc:
+        repository.mark_dataset_sync_failed(dataset, str(exc))
+        if plan["name"] == "free":
+            return plan_limit_error(str(exc), exc.feature)
+        return error(str(exc))
+    except GoogleSheetError as exc:
+        repository.mark_dataset_sync_failed(dataset, str(exc))
+        return error(str(exc))
+
+    current_size = max(0, int(dataset.get("source_size_bytes", 0)))
+    projected_total = (
+        repository.total_source_bytes(owner_id())
+        - current_size
+        + snapshot.source_size_bytes
+    )
+    if projected_total > plan["max_storage_mb"] * 1024 * 1024:
+        message = (
+            f"Your {plan['label']} plan supports "
+            f"{storage_limit_label(plan['max_storage_mb'])} of source data."
+        )
+        repository.mark_dataset_sync_failed(dataset, message)
+        return plan_limit_error(message, "storage_capacity")
+
+    try:
+        updated = repository.replace_dataset(
+            dataset,
+            snapshot.frame,
+            source_size_bytes=snapshot.source_size_bytes,
+            sync_completed=True,
+        )
+    except DataValidationError as exc:
+        repository.mark_dataset_sync_failed(dataset, str(exc))
+        return error(str(exc))
+    record_account_activity(
+        "google_sheet.refreshed",
+        {"dataset_id": dataset_id, "row_count": updated["row_count"]},
+    )
+    return jsonify(
+        dataset=updated,
+        rows=repository.get_rows(dataset, limit=100),
+    )
 
 
 @bp.get("/api/datasets/<dataset_id>")

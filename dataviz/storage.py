@@ -33,6 +33,7 @@ class Store:
         filename: str,
         frame: pd.DataFrame,
         source_size_bytes: int = 0,
+        source_metadata: dict | None = None,
     ):
         now = utc_now()
         metadata = {
@@ -44,7 +45,20 @@ class Store:
             "source_size_bytes": max(0, int(source_size_bytes)),
             "created_at": now,
             "updated_at": now,
+            "source_type": "upload",
         }
+        if source_metadata:
+            metadata.update(
+                {
+                    "source_type": "google_sheet",
+                    "source_url": source_metadata["source_url"],
+                    "source_spreadsheet_id": source_metadata["spreadsheet_id"],
+                    "source_sheet_gid": source_metadata["sheet_gid"],
+                    "last_synced_at": now,
+                    "last_sync_status": "success",
+                    "last_sync_error": "",
+                }
+            )
         result = self.db.datasets.insert_one(metadata)
         dataset_id = result.inserted_id
         try:
@@ -62,6 +76,11 @@ class Store:
 
     def count_datasets(self, owner_id: str) -> int:
         return self.db.datasets.count_documents({"owner_id": owner_id})
+
+    def count_google_sheet_connections(self, owner_id: str) -> int:
+        return self.db.datasets.count_documents(
+            {"owner_id": owner_id, "source_type": "google_sheet"}
+        )
 
     def total_source_bytes(self, owner_id: str) -> int:
         return sum(
@@ -84,7 +103,14 @@ class Store:
     def get_rows(self, dataset, limit: int):
         return self._read_rows(dataset, limit=limit)
 
-    def replace_dataset(self, dataset, frame: pd.DataFrame):
+    def replace_dataset(
+        self,
+        dataset,
+        frame: pd.DataFrame,
+        *,
+        source_size_bytes: int | None = None,
+        sync_completed: bool = False,
+    ):
         dataset_id = dataset["_id"]
         old_row_source_id = dataset.get("row_source_id", dataset_id)
         new_row_source_id = ObjectId()
@@ -101,6 +127,16 @@ class Store:
             "row_source_id": new_row_source_id,
             "updated_at": now,
         }
+        if source_size_bytes is not None:
+            updates["source_size_bytes"] = max(0, int(source_size_bytes))
+        if sync_completed:
+            updates.update(
+                {
+                    "last_synced_at": now,
+                    "last_sync_status": "success",
+                    "last_sync_error": "",
+                }
+            )
         try:
             self.db.datasets.update_one({"_id": dataset_id}, {"$set": updates})
         except Exception:
@@ -108,6 +144,17 @@ class Store:
             raise
         dataset.update(updates)
         self.db.dataset_rows.delete_many({"dataset_id": old_row_source_id})
+        return self.serialize_dataset(dataset)
+
+    def mark_dataset_sync_failed(self, dataset, message: str):
+        now = utc_now()
+        updates = {
+            "last_sync_status": "failed",
+            "last_sync_error": str(message)[:300],
+            "updated_at": now,
+        }
+        self.db.datasets.update_one({"_id": dataset["_id"]}, {"$set": updates})
+        dataset.update(updates)
         return self.serialize_dataset(dataset)
 
     def delete_dataset(self, owner_id: str, dataset_id: str):
@@ -479,7 +526,7 @@ class Store:
 
     @staticmethod
     def serialize_dataset(document):
-        return {
+        serialized = {
             "id": str(document["_id"]),
             "name": document["name"],
             "columns": document["columns"],
@@ -488,7 +535,27 @@ class Store:
             "source_size_bytes": max(0, int(document.get("source_size_bytes", 0))),
             "created_at": document["created_at"].isoformat(),
             "updated_at": document["updated_at"].isoformat(),
+            "source_type": document.get("source_type", "upload"),
         }
+        if serialized["source_type"] == "google_sheet":
+            last_synced_at = document.get("last_synced_at")
+            serialized.update(
+                {
+                    "source_url": document.get("source_url", ""),
+                    "source_spreadsheet_id": document.get(
+                        "source_spreadsheet_id", ""
+                    ),
+                    "source_sheet_gid": document.get("source_sheet_gid", "0"),
+                    "last_synced_at": (
+                        last_synced_at.isoformat() if last_synced_at else None
+                    ),
+                    "last_sync_status": document.get(
+                        "last_sync_status", "unknown"
+                    ),
+                    "last_sync_error": document.get("last_sync_error", ""),
+                }
+            )
+        return serialized
 
     @staticmethod
     def serialize_dashboard(document):

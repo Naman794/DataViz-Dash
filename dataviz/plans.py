@@ -69,6 +69,9 @@ def resolve_plan(user=None) -> dict:
             "chart_row_limit": current_app.config["CHART_ROW_LIMIT"],
             "max_storage_mb": current_app.config["PRO_STORAGE_MB"],
             "max_pages": current_app.config["PRO_PAGE_LIMIT"],
+            "max_sheet_connections": current_app.config[
+                "PRO_SHEET_CONNECTION_LIMIT"
+            ],
             "dashboard_exports": True,
         }
 
@@ -92,5 +95,8 @@ def resolve_plan(user=None) -> dict:
         ),
         "max_storage_mb": current_app.config["FREE_STORAGE_MB"],
         "max_pages": current_app.config["FREE_PAGE_LIMIT"],
+        "max_sheet_connections": current_app.config[
+            "FREE_SHEET_CONNECTION_LIMIT"
+        ],
         "dashboard_exports": False,
     }

@@ -127,9 +127,11 @@ p { color: var(--muted); line-height: 1.6; }
 .intro-row p { margin-bottom: 0; }
 .step-badge { border-radius: 999px; background: var(--primary-soft); color: var(--primary); padding: 8px 12px; font-size: .78rem; font-weight: 700; }
 
-.upload-card {
+.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.source-card {
+  position: relative;
   display: grid;
-  min-height: 250px;
+  min-height: 310px;
   place-items: center;
   align-content: center;
   border: 2px dashed #cfd3df;
@@ -139,12 +141,22 @@ p { color: var(--muted); line-height: 1.6; }
   text-align: center;
   transition: .2s ease;
 }
+.source-label { position: absolute; top: 20px; left: 22px; color: var(--accent); font-size: .67rem; font-weight: 800; letter-spacing: .14em; }
 .upload-card.dragging { border-color: var(--primary); background: var(--primary-soft); transform: translateY(-2px); }
 .upload-card h3 { margin: 8px 0 4px; font-size: 1.15rem; }
 .upload-card p { margin-bottom: 18px; }
 .upload-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .upload-helper { margin-top: 11px; color: var(--muted); font-size: .78rem; }
 .upload-icon { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 17px; background: var(--primary-soft); color: var(--primary); font-size: 1.8rem; font-weight: 700; }
+.sheet-card { border-style: solid; }
+.sheet-card p { max-width: 470px; margin-bottom: 14px; text-align: center; }
+.sheet-icon { background: var(--accent-soft); color: var(--accent); }
+.sheet-link-field { width: min(520px, 100%); margin-bottom: 12px; text-align: left; }
+.sheet-link-field input { font-size: .86rem; }
+.source-status { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: -10px 0 18px; border: 1px solid #cfe5df; border-radius: 12px; background: #f1faf7; color: #315e56; padding: 12px 15px; font-size: .82rem; }
+.source-status strong, .source-status span { display: block; }
+.source-status span { margin-top: 2px; color: var(--muted); }
+.source-status.failed { border-color: #f2cdd3; background: #fff4f6; color: #9b3141; }
 .upload-progress { width: min(360px, 80%); height: 5px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #e4e2f5; }
 .upload-progress span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--primary); animation: progress 1s infinite ease-in-out; }
 @keyframes progress { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
@@ -322,6 +334,7 @@ tr:hover td { background: #f5f7f5; }
   .builder-layout { grid-template-columns: 1fr; }
   .builder-controls { position: static; }
   .auth-grid, .pricing-grid { grid-template-columns: 1fr; }
+  .source-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {

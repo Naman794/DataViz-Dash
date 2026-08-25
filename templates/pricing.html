@@ -37,7 +37,8 @@
         <ul class="feature-list">
           <li>{{ free_plan.max_upload_mb }} MB uploads</li>
           <li>{{ "{:,}".format(free_plan.max_dataset_rows) }} rows per dataset</li>
-          <li>{{ free_plan.max_storage_mb }} MB total uploaded data</li>
+          <li>{{ free_plan.max_storage_mb }} MB total source data</li>
+          <li>{{ free_plan.max_sheet_connections }} connected Google Sheet</li>
           <li>{{ free_plan.max_datasets }} saved datasets</li>
           <li>{{ free_plan.max_dashboards }} saved dashboards</li>
           <li>{{ free_plan.max_charts }} visuals across {{ free_plan.max_pages }} dashboard page</li>
@@ -58,7 +59,8 @@
         <ul class="feature-list">
           <li>{{ pro_plan.max_upload_mb }} MB uploads</li>
           <li>{{ "{:,}".format(pro_plan.max_dataset_rows) }} rows per dataset</li>
-          <li>{{ pro_plan.max_storage_mb // 1024 }} GB total uploaded data</li>
+          <li>{{ pro_plan.max_storage_mb // 1024 }} GB total source data</li>
+          <li>{{ pro_plan.max_sheet_connections }} connected Google Sheets</li>
           <li>{{ pro_plan.max_datasets }} saved datasets</li>
           <li>{{ pro_plan.max_dashboards }} saved dashboards</li>
           <li>{{ pro_plan.max_charts }} visuals across {{ pro_plan.max_pages }} dashboard pages</li>

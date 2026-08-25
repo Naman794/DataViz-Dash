@@ -54,7 +54,7 @@
           <a class="button primary" href="{{ url_for('main.index') }}">Try the sample dashboard</a>
         </div>
         <ol class="quick-steps">
-          <li><span>1</span><div><strong>Upload or try the sample</strong><p>Use CSV, XLS, or XLSX data. The original uploaded filename is kept.</p></div></li>
+          <li><span>1</span><div><strong>Choose a data source</strong><p>Upload CSV or Excel, connect a public Google Sheet, or try the sample.</p></div></li>
           <li><span>2</span><div><strong>Review and clean</strong><p>Inspect rows and columns, then fix common spreadsheet issues.</p></div></li>
           <li><span>3</span><div><strong>Build visuals</strong><p>Choose fields, calculations, chart types, sorting, and formatting.</p></div></li>
           <li><span>4</span><div><strong>Arrange and save</strong><p>Drag, resize, save, reopen, and export your dashboard.</p></div></li>
@@ -73,8 +73,17 @@
           <li>Review its row count, column count, field names, and preview table.</li>
         </ol>
         <div class="docs-note"><strong>Supported formats:</strong> CSV, XLS, and XLSX. Upload and row limits depend on your plan.</div>
+        <h3>Connect a Google Sheet</h3>
+        <ol>
+          <li>In Google Sheets, set <b>General access</b> to <b>Anyone with the link</b> and Viewer.</li>
+          <li>Open the worksheet tab you want DataViz Dash to read, then copy its URL.</li>
+          <li>Paste the URL under <b>Connect Google Sheet</b> and select <b>Connect sheet</b>.</li>
+          <li>The worksheet loads as a normal dataset and keeps the tab identifier from the link.</li>
+          <li>Choose <b>Refresh now</b> whenever the Sheet changes. Existing dashboards continue using the same dataset.</li>
+        </ol>
+        <div class="docs-note"><strong>Refresh safety:</strong> If Google access is removed, the source exceeds your plan, or the new data cannot be parsed, DataViz Dash keeps the last successful copy and shows the refresh error.</div>
         <h3>Switch datasets</h3>
-        <p>Select any uploaded file from <b>Active dataset</b>. It loads immediately; there is no separate Open button.</p>
+        <p>Select any uploaded or connected source from <b>Active dataset</b>. It loads immediately; there is no separate Open button.</p>
         <h3>Download or delete</h3>
         <p>Use <b>Download CSV</b> to download the current prepared dataset. Use <b>Delete</b> only when you no longer need the dataset; dashboards attached to deleted data cannot render correctly.</p>
       </section>
@@ -182,7 +191,7 @@
           <li>DataViz Dash uses the verified email to create an account or securely link an existing account with the same email.</li>
           <li>Your current anonymous workspace is moved into the signed-in account.</li>
         </ol>
-        <div class="docs-note"><strong>Requested Google access:</strong> OpenID identity, email, and basic profile. DataViz Dash does not request Google Drive or spreadsheet access.</div>
+        <div class="docs-note"><strong>Requested Google access:</strong> Sign-in uses only OpenID identity, email, and basic profile. The public Sheet connector is separate and does not request Google Drive or private spreadsheet access.</div>
         <h3>Email and password</h3>
         <p>Passwords must contain 10–128 characters and are stored as secure hashes. Signing in restores the datasets and dashboards owned by that account.</p>
       </section>
@@ -197,8 +206,10 @@
               <tr><td>Price</td><td>₹0</td><td>₹499/month</td></tr>
               <tr><td>Upload per file</td><td>50 MB</td><td>100 MB</td></tr>
               <tr><td>Rows per dataset</td><td>100,000</td><td>100,000</td></tr>
-              <tr><td>Total uploaded data</td><td>150 MB</td><td>5 GB</td></tr>
+              <tr><td>Total source data</td><td>150 MB</td><td>5 GB</td></tr>
               <tr><td>Saved datasets</td><td>3</td><td>25</td></tr>
+              <tr><td>Connected Google Sheets</td><td>1</td><td>5</td></tr>
+              <tr><td>Google Sheet refresh</td><td>Manual</td><td>Manual; hourly planned</td></tr>
               <tr><td>Saved dashboards</td><td>2</td><td>25</td></tr>
               <tr><td>Visuals per dashboard</td><td>4 total</td><td>12 total</td></tr>
               <tr><td>Pages per dashboard</td><td>1</td><td>20</td></tr>
@@ -215,6 +226,8 @@
         <h2>Privacy and security</h2>
         <ul>
           <li>Uploaded datasets do not receive public share links.</li>
+          <li>A connected Google Sheet must already be publicly viewable to anyone with its link.</li>
+          <li>The connector stores the canonical Sheet URL and tab identifier, not Google credentials.</li>
           <li>Anonymous workspaces are isolated using a signed browser session.</li>
           <li>Registered workspaces are owned by the signed-in account.</li>
           <li>Plan limits are enforced by the server, not only hidden in the interface.</li>
@@ -233,6 +246,7 @@
           <details><summary>A chart is empty</summary><p>Check that the selected fields contain compatible values. Use a numeric Y-axis for sum or average, and confirm date values are valid before using date grouping.</p></details>
           <details><summary>I cannot add another page or visual</summary><p>You have reached the dashboard limit for your plan. Free includes one page and four visuals total.</p></details>
           <details><summary>Google sign-in is unavailable</summary><p>The deployment owner must configure the Google Client ID, Client Secret, and exact callback URL. Email/password sign-in remains available.</p></details>
+          <details><summary>A Google Sheet cannot be connected</summary><p>Confirm the URL is from docs.google.com/spreadsheets, open the correct worksheet tab before copying it, and set General access to “Anyone with the link”.</p></details>
           <details><summary>The live site is slow on first open</summary><p>The Render service may be waking after inactivity. Wait briefly and refresh once.</p></details>
         </div>
       </section>

@@ -57,6 +57,9 @@ def test_workspace_page_loads(client):
     assert b"maximum 50 MB and 100 rows" in response.data
     assert b"original filename kept automatically" in response.data
     assert b'id="sample-data-button"' in response.data
+    assert b"Connect Google Sheet" in response.data
+    assert b'id="google-sheet-url"' in response.data
+    assert b'id="refresh-sheet-button"' in response.data
     assert b'href="/"' in response.data
     assert b'href="/builder"' in response.data
 
@@ -67,8 +70,8 @@ def test_pricing_page_reflects_capacity_v2(client):
     assert b"50 MB uploads" in response.data
     assert b"100 MB uploads" in response.data
     assert b"100 rows per dataset" in response.data
-    assert b"150 MB total uploaded data" in response.data
-    assert b"5 GB total uploaded data" in response.data
+    assert b"150 MB total source data" in response.data
+    assert b"5 GB total source data" in response.data
     assert b"1 dashboard page" in response.data
     assert b"20 dashboard pages" in response.data
     assert "₹499".encode() in response.data
@@ -86,14 +89,14 @@ def test_health_and_version_endpoints(client):
     assert health.get_json() == {
         "status": "ok",
         "database": "connected",
-        "version": "0.2.1",
+        "version": "0.3.0",
     }
 
     version = client.get("/api/version")
     assert version.status_code == 200
     assert version.get_json() == {
         "name": "DataViz Dash",
-        "version": "0.2.1",
+        "version": "0.3.0",
     }
 
 
