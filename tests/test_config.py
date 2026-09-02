@@ -16,6 +16,7 @@ def test_default_capacity_limits():
     assert Config.PRO_CHART_LIMIT == 12
     assert Config.PRO_STORAGE_MB == 5120
     assert Config.PRO_PAGE_LIMIT == 20
+    assert Config.DATA_RETENTION_DAYS == 90
     assert Config.MONGO_SERVER_SELECTION_TIMEOUT_MS == 5000
     assert Config.MONGO_CONNECT_TIMEOUT_MS == 5000
     assert Config.MONGO_SOCKET_TIMEOUT_MS == 20000

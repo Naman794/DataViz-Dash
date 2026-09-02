@@ -1,33 +1,23 @@
-# DataViz Dash V 0.3.0
+# DataViz Dash V 0.3.1
 
-Connected spreadsheet sources arrive in DataViz Dash.
+## Retention and source-policy update
 
-## Highlights
+- Remove the Google Sheet URL connector and refresh API for now.
+- Keep CSV, XLS, and XLSX upload as the supported ingestion workflow.
+- Assign every dataset, row chunk, and dashboard a 90-day expiry deadline.
+- Backfill deadlines for existing workspace records from their creation dates.
+- Automatically delete expired workspace data and dependent stored rows.
+- Show the retention notice and dataset expiry date inside the workspace.
+- Publish a dedicated data-retention policy.
+- Add a separate Extended Storage add-on for customers who need longer retention.
+- Keep account, authentication, security, billing, and legally required records
+  outside the workspace-content retention rule.
 
-- Connect a publicly viewable Google Sheet using its normal sharing URL.
-- Detect and retain the selected worksheet tab from the URL `gid`.
-- Refresh a connected dataset without uploading the spreadsheet again.
-- Keep existing dashboards attached to the same dataset after refresh.
-- Display the last successful sync, worksheet identifier, and refresh errors.
-- Preserve the last-known-good rows when access, validation, or quota checks fail.
-- Enforce one connected Google Sheet on Free and five on Pro.
-- Bound every external download by an HTTPS Google hostname, timeout, byte limit,
-  row limit, storage quota, and owner check.
-- Keep Google sign-in permissions separate from public Sheet imports; no Drive
-  scope, access token, or refresh token is stored for this connector.
+## Upgrade warning
 
-## Quality
-
-- Automated coverage for URL validation, bounded CSV retrieval, connection
-  limits, refresh replacement, and failed-refresh recovery.
-- Full compilation, Ruff, JavaScript syntax, and Pytest verification.
-
-## Next milestone
-
-Private Google Sheet authorization and hourly refresh through a dedicated Render
-Cron Job remain follow-up work.
-
----
+Deploying this release makes the policy active. Existing workspace content older
+than 90 days may be permanently deleted after deployment. Export anything that
+must be retained before upgrading.
 
 # DataViz Dash V 0.1
 

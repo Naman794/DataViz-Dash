@@ -48,6 +48,15 @@ def test_documentation_page_lists_complete_product_workflow(client):
     assert b"Continue with Google" in response.data
     assert b"Privacy and security" in response.data
     assert b"Troubleshooting" in response.data
+    assert b"90 days" in response.data
+
+
+def test_data_retention_policy_is_public(client):
+    response = client.get("/data-retention")
+    assert response.status_code == 200
+    assert b"Workspace data retention policy" in response.data
+    assert b"Automatic deletion after 90 days" in response.data
+    assert b"Extended Storage" in response.data
 
 
 def test_workspace_page_loads(client):
@@ -57,9 +66,9 @@ def test_workspace_page_loads(client):
     assert b"maximum 50 MB and 100 rows" in response.data
     assert b"original filename kept automatically" in response.data
     assert b'id="sample-data-button"' in response.data
-    assert b"Connect Google Sheet" in response.data
-    assert b'id="google-sheet-url"' in response.data
-    assert b'id="refresh-sheet-button"' in response.data
+    assert b"90-day data retention" in response.data
+    assert b'id="dataset-expiry"' in response.data
+    assert b"Connect Google Sheet" not in response.data
     assert b'href="/"' in response.data
     assert b'href="/builder"' in response.data
 
@@ -70,8 +79,8 @@ def test_pricing_page_reflects_capacity_v2(client):
     assert b"50 MB uploads" in response.data
     assert b"100 MB uploads" in response.data
     assert b"100 rows per dataset" in response.data
-    assert b"150 MB total source data" in response.data
-    assert b"5 GB total source data" in response.data
+    assert b"150 MB total uploaded data" in response.data
+    assert b"5 GB total uploaded data" in response.data
     assert b"1 dashboard page" in response.data
     assert b"20 dashboard pages" in response.data
     assert "₹499".encode() in response.data
@@ -89,14 +98,14 @@ def test_health_and_version_endpoints(client):
     assert health.get_json() == {
         "status": "ok",
         "database": "connected",
-        "version": "0.3.0",
+        "version": "0.3.1",
     }
 
     version = client.get("/api/version")
     assert version.status_code == 200
     assert version.get_json() == {
         "name": "DataViz Dash",
-        "version": "0.3.0",
+        "version": "0.3.1",
     }
 
 

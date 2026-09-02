@@ -1,7 +1,7 @@
 """MongoDB persistence for workspaces, accounts, and administration."""
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 from bson import BSON, ObjectId
@@ -24,8 +24,15 @@ def utc_now():
 
 
 class Store:
-    def __init__(self, database):
+    def __init__(self, database, retention_days: int = 90):
         self.db = database
+        self.retention_days = max(1, int(retention_days))
+
+    def retention_deadline(self, created_at=None):
+        created_at = created_at or utc_now()
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        return created_at + timedelta(days=self.retention_days)
 
     def create_dataset(
         self,
@@ -33,9 +40,9 @@ class Store:
         filename: str,
         frame: pd.DataFrame,
         source_size_bytes: int = 0,
-        source_metadata: dict | None = None,
     ):
         now = utc_now()
+        expires_at = self.retention_deadline(now)
         metadata = {
             "owner_id": owner_id,
             "name": filename,
@@ -45,24 +52,12 @@ class Store:
             "source_size_bytes": max(0, int(source_size_bytes)),
             "created_at": now,
             "updated_at": now,
-            "source_type": "upload",
+            "expires_at": expires_at,
         }
-        if source_metadata:
-            metadata.update(
-                {
-                    "source_type": "google_sheet",
-                    "source_url": source_metadata["source_url"],
-                    "source_spreadsheet_id": source_metadata["spreadsheet_id"],
-                    "source_sheet_gid": source_metadata["sheet_gid"],
-                    "last_synced_at": now,
-                    "last_sync_status": "success",
-                    "last_sync_error": "",
-                }
-            )
         result = self.db.datasets.insert_one(metadata)
         dataset_id = result.inserted_id
         try:
-            self._insert_rows(dataset_id, frame)
+            self._insert_rows(dataset_id, frame, expires_at=expires_at)
         except Exception:
             self.db.dataset_rows.delete_many({"dataset_id": dataset_id})
             self.db.datasets.delete_one({"_id": dataset_id})
@@ -76,11 +71,6 @@ class Store:
 
     def count_datasets(self, owner_id: str) -> int:
         return self.db.datasets.count_documents({"owner_id": owner_id})
-
-    def count_google_sheet_connections(self, owner_id: str) -> int:
-        return self.db.datasets.count_documents(
-            {"owner_id": owner_id, "source_type": "google_sheet"}
-        )
 
     def total_source_bytes(self, owner_id: str) -> int:
         return sum(
@@ -103,19 +93,15 @@ class Store:
     def get_rows(self, dataset, limit: int):
         return self._read_rows(dataset, limit=limit)
 
-    def replace_dataset(
-        self,
-        dataset,
-        frame: pd.DataFrame,
-        *,
-        source_size_bytes: int | None = None,
-        sync_completed: bool = False,
-    ):
+    def replace_dataset(self, dataset, frame: pd.DataFrame):
         dataset_id = dataset["_id"]
         old_row_source_id = dataset.get("row_source_id", dataset_id)
         new_row_source_id = ObjectId()
         try:
-            self._insert_rows(new_row_source_id, frame)
+            expires_at = dataset.get("expires_at") or self.retention_deadline(
+                dataset.get("created_at")
+            )
+            self._insert_rows(new_row_source_id, frame, expires_at=expires_at)
         except Exception:
             self.db.dataset_rows.delete_many({"dataset_id": new_row_source_id})
             raise
@@ -127,16 +113,6 @@ class Store:
             "row_source_id": new_row_source_id,
             "updated_at": now,
         }
-        if source_size_bytes is not None:
-            updates["source_size_bytes"] = max(0, int(source_size_bytes))
-        if sync_completed:
-            updates.update(
-                {
-                    "last_synced_at": now,
-                    "last_sync_status": "success",
-                    "last_sync_error": "",
-                }
-            )
         try:
             self.db.datasets.update_one({"_id": dataset_id}, {"$set": updates})
         except Exception:
@@ -144,17 +120,6 @@ class Store:
             raise
         dataset.update(updates)
         self.db.dataset_rows.delete_many({"dataset_id": old_row_source_id})
-        return self.serialize_dataset(dataset)
-
-    def mark_dataset_sync_failed(self, dataset, message: str):
-        now = utc_now()
-        updates = {
-            "last_sync_status": "failed",
-            "last_sync_error": str(message)[:300],
-            "updated_at": now,
-        }
-        self.db.datasets.update_one({"_id": dataset["_id"]}, {"$set": updates})
-        dataset.update(updates)
         return self.serialize_dataset(dataset)
 
     def delete_dataset(self, owner_id: str, dataset_id: str):
@@ -171,6 +136,10 @@ class Store:
 
     def create_dashboard(self, owner_id: str, payload: dict):
         now = utc_now()
+        expires_at = self.retention_deadline(now)
+        dataset = self.get_dataset(owner_id, payload["dataset_id"])
+        if dataset and dataset.get("expires_at"):
+            expires_at = min(expires_at, self._aware(dataset["expires_at"]))
         document = {
             "owner_id": owner_id,
             "title": payload["title"],
@@ -181,6 +150,7 @@ class Store:
             "filters": payload.get("filters", []),
             "created_at": now,
             "updated_at": now,
+            "expires_at": expires_at,
         }
         result = self.db.dashboards.insert_one(document)
         document["_id"] = result.inserted_id
@@ -190,6 +160,20 @@ class Store:
         object_id = self._object_id(dashboard_id)
         if object_id is None:
             return None
+        current = self.db.dashboards.find_one(
+            {"_id": object_id, "owner_id": owner_id},
+            {"expires_at": 1, "created_at": 1},
+        )
+        if current is None:
+            return None
+        expires_at = current.get("expires_at") or self.retention_deadline(
+            current.get("created_at")
+        )
+        dataset = self.get_dataset(owner_id, payload["dataset_id"])
+        if dataset and dataset.get("expires_at"):
+            expires_at = min(
+                self._aware(expires_at), self._aware(dataset["expires_at"])
+            )
         updates = {
             "title": payload["title"],
             "dataset_id": payload["dataset_id"],
@@ -198,6 +182,7 @@ class Store:
             "active_page_id": payload.get("active_page_id"),
             "filters": payload.get("filters", []),
             "updated_at": utc_now(),
+            "expires_at": expires_at,
         }
         result = self.db.dashboards.find_one_and_update(
             {"_id": object_id, "owner_id": owner_id},
@@ -214,6 +199,40 @@ class Store:
 
     def count_dashboards(self, owner_id: str) -> int:
         return self.db.dashboards.count_documents({"owner_id": owner_id})
+
+    def purge_expired_data(self, now=None):
+        """Permanently remove expired workspace content and dependent rows."""
+        now = now or utc_now()
+        expired = list(
+            self.db.datasets.find(
+                {"expires_at": {"$lte": now}},
+                {"_id": 1, "owner_id": 1, "row_source_id": 1},
+            )
+        )
+        if expired:
+            dataset_ids = [document["_id"] for document in expired]
+            row_source_ids = list(
+                {
+                    document.get("row_source_id", document["_id"])
+                    for document in expired
+                }
+                | set(dataset_ids)
+            )
+            serialized_ids = [str(dataset_id) for dataset_id in dataset_ids]
+            self.db.dataset_rows.delete_many(
+                {"dataset_id": {"$in": row_source_ids}}
+            )
+            self.db.dashboards.delete_many(
+                {"dataset_id": {"$in": serialized_ids}}
+            )
+            self.db.datasets.delete_many({"_id": {"$in": dataset_ids}})
+        dashboard_result = self.db.dashboards.delete_many(
+            {"expires_at": {"$lte": now}}
+        )
+        return {
+            "datasets": len(expired),
+            "dashboards": dashboard_result.deleted_count,
+        }
 
     def create_user(
         self, email: str, password_hash: str, google_subject: str | None = None
@@ -465,7 +484,13 @@ class Store:
             event["email"] = emails.get(event.get("user_id"), "Unknown account")
         return events
 
-    def _insert_rows(self, dataset_id: ObjectId, frame: pd.DataFrame):
+    def _insert_rows(
+        self,
+        dataset_id: ObjectId,
+        frame: pd.DataFrame,
+        expires_at=None,
+    ):
+        expires_at = expires_at or self.retention_deadline()
         pending_documents = []
         for start in range(0, len(frame), ROW_CHUNK_SIZE):
             records = frame_to_records(frame.iloc[start : start + ROW_CHUNK_SIZE])
@@ -484,6 +509,7 @@ class Store:
                             "dataset_id": dataset_id,
                             "position": start + offset - len(chunk),
                             "rows": chunk,
+                            "expires_at": expires_at,
                         }
                     )
                     if len(pending_documents) >= CHUNK_INSERT_BATCH_SIZE:
@@ -499,6 +525,7 @@ class Store:
                         "dataset_id": dataset_id,
                         "position": start + len(records) - len(chunk),
                         "rows": chunk,
+                        "expires_at": expires_at,
                     }
                 )
                 if len(pending_documents) >= CHUNK_INSERT_BATCH_SIZE:
@@ -526,7 +553,7 @@ class Store:
 
     @staticmethod
     def serialize_dataset(document):
-        serialized = {
+        return {
             "id": str(document["_id"]),
             "name": document["name"],
             "columns": document["columns"],
@@ -535,27 +562,8 @@ class Store:
             "source_size_bytes": max(0, int(document.get("source_size_bytes", 0))),
             "created_at": document["created_at"].isoformat(),
             "updated_at": document["updated_at"].isoformat(),
-            "source_type": document.get("source_type", "upload"),
+            "expires_at": document["expires_at"].isoformat(),
         }
-        if serialized["source_type"] == "google_sheet":
-            last_synced_at = document.get("last_synced_at")
-            serialized.update(
-                {
-                    "source_url": document.get("source_url", ""),
-                    "source_spreadsheet_id": document.get(
-                        "source_spreadsheet_id", ""
-                    ),
-                    "source_sheet_gid": document.get("source_sheet_gid", "0"),
-                    "last_synced_at": (
-                        last_synced_at.isoformat() if last_synced_at else None
-                    ),
-                    "last_sync_status": document.get(
-                        "last_sync_status", "unknown"
-                    ),
-                    "last_sync_error": document.get("last_sync_error", ""),
-                }
-            )
-        return serialized
 
     @staticmethod
     def serialize_dashboard(document):
@@ -569,7 +577,14 @@ class Store:
             "filters": document.get("filters", []),
             "created_at": document["created_at"].isoformat(),
             "updated_at": document["updated_at"].isoformat(),
+            "expires_at": document["expires_at"].isoformat(),
         }
+
+    @staticmethod
+    def _aware(value):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
 
     @staticmethod
     def _object_id(value):

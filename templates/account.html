@@ -34,7 +34,7 @@
       <section class="account-card single-card">
         <span class="eyebrow">YOUR ACCOUNT</span>
         <h1>{{ user.email }}</h1>
-        <p>Your dashboards are attached to this account and remain available after signing back in.</p>
+        <p>Your dashboards are attached to this account and remain available after signing back in until their {{ config.DATA_RETENTION_DAYS }}-day retention deadline.</p>
         <div class="account-stats">
           <div><span>Plan</span><strong>{{ account_plan.label }}</strong></div>
           <div><span>Datasets</span><strong>{{ usage.datasets }} / {{ account_plan.max_datasets }}</strong></div>
@@ -45,6 +45,7 @@
           <a class="button primary" href="{{ url_for('main.index') }}">Open workspace</a>
           {% if account_is_admin %}<a class="button secondary" href="{{ url_for('admin.dashboard') }}">Admin dashboard</a>{% endif %}
           <a class="button tertiary" href="{{ url_for('main.pricing') }}">Compare plans</a>
+          <a class="button tertiary" href="{{ url_for('main.data_retention') }}">Data retention</a>
           <form method="post" action="{{ url_for('auth.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button danger-ghost" type="submit">Sign out</button>
