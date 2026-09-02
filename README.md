@@ -3,13 +3,12 @@
 > Turn spreadsheets into clean, interactive dashboards without writing code.
 
 [![Live demo](https://img.shields.io/badge/Live_demo-Open_DataViz_Dash-111111?style=for-the-badge)](https://dataviz-dash.onrender.com/)
-![Release](https://img.shields.io/badge/release-v0.3.0-0f766e?style=for-the-badge)
+![Release](https://img.shields.io/badge/release-v0.3.1-0f766e?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-Flask-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache_2.0-555555?style=for-the-badge)
 
 DataViz Dash is a no-code spreadsheet analytics workspace created by
-**[Naman Sinha](https://github.com/Naman794)**. Upload CSV or Excel files or
-connect a publicly viewable Google Sheet,
+**[Naman Sinha](https://github.com/Naman794)**. Upload CSV or Excel files,
 prepare the data, build multi-page dashboards, and export presentation-ready
 results from one focused browser workspace.
 
@@ -34,10 +33,9 @@ The public landing page explains the workflow, feature set, and available plans.
 
 ### 2. Inside the app
 
-Upload CSV, XLS, or XLSX data, retain the original filename, or connect a
-publicly viewable Google Sheet and refresh it on demand. Switch datasets
-instantly, inspect rows and columns, apply cleaning rules, and download prepared
-data.
+Upload CSV, XLS, or XLSX data, retain the original filename, switch datasets
+instantly, inspect rows and columns, apply cleaning rules, and download the
+prepared data.
 
 ![DataViz Dash data workspace](docs/images/data-workspace-v0.2.png)
 
@@ -48,17 +46,21 @@ page tabs, zoom controls, and drag-and-resize grid to create reusable dashboards
 
 ![DataViz Dash dashboard builder](docs/images/dashboard-builder-v0.2.png)
 
-## Latest release — v0.3.0
+## Latest release — v0.3.1
 
-Version **v0.3.0** adds connected spreadsheet sources to the broader dashboard workspace:
+Version **v0.3.1** introduces predictable retention and returns the product to
+file-based spreadsheet imports:
 
-- Public Google Sheets import through a validated sharing link
-- Automatic worksheet `gid` detection from the pasted link
-- One-click manual refresh without re-uploading the spreadsheet
-- Last-refresh status and failure details in the Data workspace
-- Last-known-good dataset preservation when Google access or parsing fails
-- One connected Google Sheet on Free and up to five on Pro
-- Server-side source-size, row, storage, ownership, and connection enforcement
+- Google Sheet URL connection and refresh removed for now
+- CSV, XLS, and XLSX upload remains the supported data-ingestion path
+- Standard workspace data is retained for 90 days from creation
+- Automatic expiry for datasets, stored rows, and saved dashboards
+- Visible expiry dates and policy notices in the workspace
+- Dedicated `/data-retention` policy page
+- Separate Extended Storage add-on for longer retention, priced by quote
+
+The broader dashboard workspace also includes:
+
 - One-click sample dataset and ready-made dashboard for first-time visitors
 - Deployment health and version endpoints for release monitoring
 - Privacy-safe public product screenshots
@@ -78,7 +80,6 @@ Version **v0.3.0** adds connected spreadsheet sources to the broader dashboard w
 ## Core capabilities
 
 - CSV, XLS, and XLSX upload and preview
-- Public Google Sheets connection and on-demand refresh
 - Column renaming and removal
 - Missing-value replacement or incomplete-row deletion
 - Duplicate and completely empty-row removal
@@ -92,10 +93,11 @@ Version **v0.3.0** adds connected spreadsheet sources to the broader dashboard w
 - Email/password and Google accounts with persistent workspace ownership
 - Protected administrator console with activity and access controls
 - Responsive layouts for desktop and smaller screens
+- Fixed 90-day workspace retention with per-item expiry dates
 
 ## Product flow
 
-1. Try the sample, upload a spreadsheet, or connect a public Google Sheet.
+1. Try the bundled sample dashboard or upload your own spreadsheet.
 2. Apply cleaning rules to prepare the dataset for analysis.
 3. Open the builder and choose fields, aggregations, and visual types.
 4. Arrange visuals across one or more sheet-style dashboard pages.
@@ -113,6 +115,7 @@ DataViz Dash now has a six-level India-focused commercial ladder:
 | Agency | Multiple clients/workspaces | ₹4,999–₹9,999/month |
 | Enterprise | SSO, private deployment, SLA | Custom |
 | Government | Private/on-prem deployment + support | Custom annual contract |
+| Extended Storage | Longer workspace-data retention only | Custom quote |
 
 Free and Pro are the current technical entitlement levels. Pro checkout remains
 disabled while billing is being integrated. Business, Agency, Enterprise, and
@@ -127,7 +130,6 @@ SSO, deployment, and SLA capabilities must be delivered before they are sold.
 | Rows per dataset | 100,000 | 100,000 |
 | Total uploaded source data | 150 MB | 5 GB |
 | Saved datasets | 3 | 25 |
-| Connected Google Sheets | 1 | 5 |
 | Saved dashboards | 2 | 25 |
 | Visuals per dashboard | 4 total | 12 total |
 | Pages per dashboard | 1 | 20 |
@@ -135,6 +137,8 @@ SSO, deployment, and SLA capabilities must be delivered before they are sold.
 | Basic data cleaning | Included | Included |
 | Cleaned CSV and chart PNG export | Included | Included |
 | Dashboard JSON and print/PDF export | Upgrade required | Included |
+| Workspace retention | 90 days | 90 days |
+| Longer retention | Extended Storage add-on | Extended Storage add-on |
 
 The **5 GB Pro allowance is total account storage measured from original upload
 sizes**. It is not a 5 GB single-file limit; individual Pro uploads remain capped
@@ -146,7 +150,7 @@ architecture.
 | Layer | Technology |
 | --- | --- |
 | Application | Python and Flask |
-| Data processing | Pandas, OpenPyXL, xlrd, and Google Sheets CSV export |
+| Data processing | Pandas, OpenPyXL, and xlrd |
 | Database | MongoDB and PyMongo |
 | Visualisation | Plotly.js |
 | Interface | HTML, CSS, and JavaScript |
@@ -181,21 +185,29 @@ The OAuth request uses only `openid email profile`. Verified Google emails can
 create a new account or link an existing account with the same email. OAuth
 tokens are not stored.
 
-Google sign-in and Google Sheet imports are separate. The current Sheet
-connector reads only a link that the user has already made publicly viewable;
-it does not request Drive access or store Google OAuth tokens. Private Sheet
-authorization and scheduled hourly refresh are planned follow-up work.
+## Data retention
+
+Standard workspace content is retained for **90 days from its original creation
+date**. This applies to uploaded datasets, derived row data, sample datasets,
+and saved dashboards. Cleaning, viewing, or signing in does not restart the
+deadline. Expired workspace content is permanently deleted, so users should
+download or export anything they need before the displayed expiry date.
+
+Users who require longer retention can apply for the separate **Extended
+Storage** add-on. Its storage capacity, retention duration, and price are quoted
+independently from the main Free, Pro, Business, or Agency product plan.
+
+Read the live [data retention policy](https://dataviz-dash.onrender.com/data-retention).
 
 ## Privacy and access
 
 - Uploaded datasets are never given public share links.
-- A connected Google Sheet must already use “Anyone with the link” access; only
-  its canonical Sheet URL and worksheet identifier are stored with the dataset.
 - Anonymous data is isolated through a signed browser workspace identifier.
 - Registered users can claim an anonymous workspace and access it after signing in.
 - Passwords are stored as secure hashes rather than plaintext.
 - Google sign-in validates the OpenID Connect response and requires a verified email.
 - Plan limits are enforced by the server rather than only hidden in the interface.
+- Workspace datasets and dashboards are automatically deleted after 90 days.
 - Administrative membership and suspension changes are written to an audit trail.
 
 ## Project status
@@ -203,8 +215,8 @@ authorization and scheduled hourly refresh are planned follow-up work.
 DataViz Dash is under active development. Version **v0.1** established the
 data-cleaning and dashboard MVP. Version **v0.2.1** added the expanded builder,
 multi-page dashboards, instant dataset switching, refreshed UI, account usage,
-and revised pricing. Version **v0.3.0** introduces connected Google Sheets with
-safe manual refresh and plan-based limits.
+and the revised capacity and six-tier pricing model. Version **v0.3.1** adds the
+90-day data lifecycle and a separate longer-retention storage option.
 
 See the [release history](https://github.com/Naman794/DataViz-Dash/releases) and
 the [freemium product plan](docs/FREEMIUM_PLAN.md).

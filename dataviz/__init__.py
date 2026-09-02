@@ -1,7 +1,7 @@
 """DataViz Dash application factory, created by Naman Sinha."""
 
 __author__ = "Naman Sinha"
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from flask import Flask, jsonify
 from pymongo.errors import PyMongoError

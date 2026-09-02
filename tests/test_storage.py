@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import mongomock
 import pandas as pd
 import pytest
@@ -52,7 +54,7 @@ def test_failed_replacement_preserves_existing_rows(monkeypatch):
     )
     stored = repository.get_dataset("owner-id", created["id"])
 
-    def fail_insert(_dataset_id, _frame):
+    def fail_insert(_dataset_id, _frame, expires_at=None):
         raise RuntimeError("simulated storage failure")
 
     monkeypatch.setattr(repository, "_insert_rows", fail_insert)
@@ -62,6 +64,65 @@ def test_failed_replacement_preserves_existing_rows(monkeypatch):
     assert repository.get_frame(stored).to_dict(orient="list") == {
         "value": [1, 2, 3]
     }
+    mongo_client.close()
+
+
+def test_workspace_content_receives_fixed_retention_deadlines():
+    mongo_client = mongomock.MongoClient()
+    database = mongo_client.dataviz_test
+    repository = Store(database, retention_days=90)
+    dataset = repository.create_dataset(
+        "owner-id", "values.csv", pd.DataFrame({"value": [1, 2]})
+    )
+    dashboard = repository.create_dashboard(
+        "owner-id",
+        {
+            "title": "Overview",
+            "dataset_id": dataset["id"],
+            "charts": [],
+            "pages": [],
+        },
+    )
+
+    dataset_document = database.datasets.find_one()
+    row_document = database.dataset_rows.find_one()
+    dashboard_document = database.dashboards.find_one()
+    assert dataset_document["expires_at"] - dataset_document["created_at"] == timedelta(
+        days=90
+    )
+    assert row_document["expires_at"] == dataset_document["expires_at"]
+    assert dashboard_document["expires_at"] == dataset_document["expires_at"]
+    assert dataset["expires_at"]
+    assert dashboard["expires_at"]
+    mongo_client.close()
+
+
+def test_expired_dataset_purge_removes_rows_and_linked_dashboard():
+    mongo_client = mongomock.MongoClient()
+    database = mongo_client.dataviz_test
+    repository = Store(database, retention_days=90)
+    dataset = repository.create_dataset(
+        "owner-id", "expired.csv", pd.DataFrame({"value": [1]})
+    )
+    repository.create_dashboard(
+        "owner-id",
+        {
+            "title": "Expired overview",
+            "dataset_id": dataset["id"],
+            "charts": [],
+            "pages": [],
+        },
+    )
+    dataset_document = database.datasets.find_one()
+
+    result = repository.purge_expired_data(
+        now=dataset_document["expires_at"] + timedelta(seconds=1)
+    )
+
+    assert result["datasets"] == 1
+    assert database.datasets.count_documents({}) == 0
+    assert database.dataset_rows.count_documents({}) == 0
+    assert database.dashboards.count_documents({}) == 0
     mongo_client.close()
 
 
