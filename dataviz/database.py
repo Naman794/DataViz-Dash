@@ -49,7 +49,9 @@ def init_database(app):
         database.admin_audit.create_index(
             [("target_user_id", ASCENDING), ("created_at", DESCENDING)]
         )
-        backfill_retention_deadlines(database, app.config["DATA_RETENTION_DAYS"])
+        backfill_retention_deadlines(
+            database, app.config.get("DATA_RETENTION_DAYS", 90)
+        )
     except PyMongoError as exc:
         app.logger.warning(
             "MongoDB was not reachable during startup; requests will retry later: %s",
