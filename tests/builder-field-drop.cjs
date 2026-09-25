@@ -1,0 +1,30 @@
+const {JSDOM}=require('jsdom');
+const fs=require('fs'),assert=require('node:assert/strict');
+const root=require('node:path').resolve(__dirname, '..')+'/';
+const dom=new JSDOM('<body data-max-charts="2"><div id="builder-canvas-viewport"><div id="builder-analysis-grid" style="padding:16px;column-gap:8px"></div></div></body>',{runScripts:'outside-only'});
+const w=dom.window;w.document.addEventListener=()=>{};
+w.eval(fs.readFileSync(root+'static/js/builder-model.js','utf8'));
+w.eval(fs.readFileSync(root+'static/js/builder.js','utf8')+`
+cacheBuilderElements();
+builderState.dataset={id:'dataset',columns:['Region','Sales'],column_types:{Region:'text',Sales:'number'}};
+builderState.sourceRows=[{Region:'North',Sales:10}];
+renderPageTabs=()=>{};renderVisuals=()=>{};markUnsaved=()=>{builderState.dirty=true};showBuilderToast=()=>{};updateHistoryButtons=()=>{};
+gridPointerMetrics=()=>({columnStride:100,rowStride:40});
+makeBuilderId=()=> 'created';
+bindFieldDropEvents();
+window.state=builderState;
+window.undo=()=>{ const snapshot=JSON.parse(builderState.layoutHistory.pop());builderState.pages=snapshot.pages;builderState.activePageId=snapshot.activePageId;setCharts(activePage().charts); };
+`);
+function drop(target,column,datasetId='dataset') {w.state.draggedField={column,datasetId}; const e=new w.Event('drop',{bubbles:true,cancelable:true});Object.assign(e,{clientX:40,clientY:40});target.dispatchEvent(e);}
+const canvas=w.document.getElementById('builder-analysis-grid');
+drop(canvas,'Region');assert.equal(w.state.charts.length,1);assert.equal(w.state.charts[0].type,'bar');assert.equal(w.state.dirty,true);
+const card=w.document.createElement('article');card.className='analysis-card';card.dataset.chartId='created';canvas.append(card);
+drop(card,'Sales');assert.equal(w.state.charts[0].y,'Sales');assert.equal(w.state.charts[0].aggregation,'sum');
+w.undo();assert.equal(w.state.charts[0].y,null);
+drop(canvas,'Sales','stale');assert.equal(w.state.charts.length,1);
+drop(canvas,'Unknown');assert.equal(w.state.charts.length,1);
+drop(canvas,'Sales');assert.equal(w.state.charts.length,2);
+drop(canvas,'Region');assert.equal(w.state.charts.length,2);
+assert.equal(w.state.draggedField,null);
+console.log('PASS: DOM drop events create/update, undo, reject stale/unknown fields, respect chart limit, clear drag state');
+w.close();

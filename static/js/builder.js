@@ -1,4 +1,5 @@
 const builderState = {
+  draggedField: null,
   datasets: [],
   dashboards: [],
   dataset: null,
@@ -122,6 +123,7 @@ function bindBuilderEvents() {
   window.addEventListener("beforeunload", (event) => {
     if (builderState.dirty || builderState.saving) { event.preventDefault(); event.returnValue = ""; }
   });
+  bindFieldDropEvents();
   restoreBuilderLayout();
   if (window.innerWidth <= 1180) { builderElements["builder-workbench"].classList.add("properties-collapsed"); updateBuilderLayoutControls(); }
   window.addEventListener("resize", () => {
@@ -602,6 +604,17 @@ function renderFields() {
     const label = document.createElement("small");
     label.textContent = type;
     button.append(icon, name, label);
+    button.draggable = true;
+    button.title = `Drag ${column} onto the canvas to create a chart, or onto a chart to change its field`;
+    button.addEventListener("dragstart", (event) => {
+      builderState.draggedField = { column, datasetId: builderState.dataset.id };
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData("application/x-dataviz-field", JSON.stringify(builderState.draggedField));
+      event.dataTransfer.setData("text/plain", column);
+      builderElements["builder-canvas-viewport"].classList.add("field-drag-active");
+    });
+    button.addEventListener("dragend", clearFieldDrag);
+
     button.addEventListener("click", () => {
       builderState.selectedField = column;
       if (!builderElements["builder-x-column"].value) builderElements["builder-x-column"].value = column;
@@ -1550,4 +1563,58 @@ function resetDashboard() {
   updateHistoryButtons();
   renderPageTabs();
   applyDashboardFilters();
+}
+
+
+function clearFieldDrag() {
+  builderState.draggedField = null;
+  builderElements["builder-canvas-viewport"].classList.remove("field-drag-active", "field-drop-target");
+  document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+}
+
+function bindFieldDropEvents() {
+  const viewport = builderElements["builder-canvas-viewport"];
+  viewport.addEventListener("dragover", (event) => {
+    if (!builderState.draggedField || builderState.draggedField.datasetId !== builderState.dataset?.id) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    viewport.classList.add("field-drop-target");
+    document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+    event.target.closest(".analysis-card")?.classList.add("field-drop-card");
+  });
+  viewport.addEventListener("dragleave", (event) => {
+    if (!viewport.contains(event.relatedTarget)) {
+      viewport.classList.remove("field-drop-target");
+      document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+    }
+  });
+  viewport.addEventListener("drop", (event) => {
+    const field = builderState.draggedField;
+    if (!field) return;
+    event.preventDefault();
+    const cardId = event.target.closest(".analysis-card")?.dataset.chartId;
+    clearFieldDrag();
+    if (field.datasetId !== builderState.dataset?.id || !builderState.dataset.columns.includes(field.column)) return;
+    const existing = builderState.charts.find((chart) => chart.id === cardId);
+    if (!existing && totalVisuals() >= builderLimits.maxCharts) return showBuilderToast(`Your plan supports up to ${builderLimits.maxCharts} visuals.`, true);
+    const type = BuilderModel.fieldType(builderState.dataset, builderState.sourceRows, field.column);
+    const chart = BuilderModel.chartFromField(existing, field.column, type);
+    if (!existing) {
+      chart.id = makeBuilderId("visual");
+      chart.size = "half";
+      const grid = builderElements["builder-analysis-grid"];
+      const bounds = grid.getBoundingClientRect();
+      const style = window.getComputedStyle(grid);
+      const metrics = gridPointerMetrics();
+      const candidate = { x: Math.max(0, Math.min(6, Math.floor((event.clientX - bounds.left - parseFloat(style.paddingLeft) * builderState.canvasZoom) / metrics.columnStride))), y: Math.max(0, Math.floor((event.clientY - bounds.top - parseFloat(style.paddingTop) * builderState.canvasZoom) / metrics.rowStride)), w: 6, h: 7 };
+      chart.layout = layoutCollides(candidate, chart.id) ? findAvailableLayout() : candidate;
+    }
+    recordLayoutHistory();
+    if (existing) setCharts(builderState.charts.map((item) => item.id === existing.id ? chart : item));
+    else setCharts([...builderState.charts, chart]);
+    renderPageTabs();
+    renderVisuals();
+    markUnsaved();
+    showBuilderToast(existing ? `Updated chart with ${field.column}.` : `Created chart from ${field.column}.`);
+  });
 }

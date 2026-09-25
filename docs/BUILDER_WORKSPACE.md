@@ -5,6 +5,17 @@ a large canvas, and a searchable data sidebar. Select Add chart to configure a
 visual. Select a card title or its Edit menu item to change it. Clicking the
 empty canvas returns to the data fields. Existing dashboards remain compatible.
 
+## Drag fields onto the dashboard
+
+Drag a field from the right-side Data list to the canvas. Text fields create a
+count-by-category bar chart, dates create a count-by-date line chart, and numbers
+create a distribution histogram. Drop onto an existing card to replace its
+category (text/date) or value (number). Histogram drops replace the histogram
+field. Existing chart titles and layouts are preserved. Changes support Undo,
+Redo and Save. The canvas and destination card highlight during dragging.
+Desktop browsers support this interaction; the Add chart controls remain available
+for touch and keyboard use.
+
 ## Controls
 
 - **Add filter:** exact category, numeric range, ISO date range, or missing values.
@@ -36,3 +47,6 @@ The older retention/Sheet URL changes remain in separate PR #21.
 Run `python -m pytest -q`, `python -m ruff check app.py dataviz tests`,
 `node --check static/js/builder.js`, and `node --test tests/builder-model.test.cjs`.
 The JavaScript tests use Node's built-in runner with no npm dependencies.
+
+The optional DOM interaction regression test is `node tests/builder-field-drop.cjs`
+with `jsdom` installed. It checks drops, Undo, stale/unknown fields and chart limits.

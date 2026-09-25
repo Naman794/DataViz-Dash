@@ -271,3 +271,9 @@
   #builder-fit-page, #builder-fit-width, #builder-actual-size, #builder-zoom-in, #builder-zoom-out, #builder-zoom-label { display: none; }
   .canvas-toolbar { flex-direction: row; align-items: center; }
 }
+
+.field-button[draggable="true"] { cursor: grab; }
+.field-button[draggable="true"]:active { cursor: grabbing; }
+.canvas-viewport.field-drag-active { outline: 2px dashed #8296ad; outline-offset: -3px; }
+.canvas-viewport.field-drop-target { outline-color: #2563eb; background-color: #eef4fc; }
+.analysis-card.field-drop-card { border-color: #2563eb; box-shadow: inset 0 0 0 2px #2563eb; }

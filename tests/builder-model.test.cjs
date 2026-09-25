@@ -30,3 +30,20 @@ test('empty filters retain source rows without mutation', () => {
   assert.equal(model.filterRows(rows, [{ column: 'Note', mode: 'missing', behavior: 'only' }]).length, 2);
   assert.equal(rows.length, 4);
 });
+test('field drops choose appropriate charts and preserve existing layout', () => {
+  assert.equal(model.chartFromField(null, 'Sales', 'number').type, 'histogram');
+  assert.equal(model.chartFromField(null, 'Region', 'text').aggregation, 'count');
+  assert.equal(model.chartFromField(null, 'Date', 'date').type, 'line');
+  const original = { id: 'a', title: 'Revenue', type: 'bar', x: 'Region', y: null, aggregation: 'count', layout: {x: 3, y: 2, w: 6, h: 7} };
+  const updated = model.chartFromField(original, 'Sales', 'number');
+  assert.equal(updated.y, 'Sales');
+  assert.equal(updated.aggregation, 'sum');
+  assert.deepEqual(updated.layout, original.layout);
+  assert.equal(updated.title, 'Revenue');
+  assert.equal(original.y, null);
+  const histogram = model.chartFromField(null, 'Sales', 'number');
+  const category = model.chartFromField(histogram, 'Region', 'text');
+  assert.equal(category.type, 'bar');
+  assert.equal(category.aggregation, 'count');
+  assert.equal(category.y, null);
+});
