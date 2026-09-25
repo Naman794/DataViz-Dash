@@ -784,6 +784,7 @@ def validate_dashboard_payload(raw_payload):
                 and chart.get("size") in {"half", "full"}
                 else "half",
                 "date_group": date_group,
+                "table_bars": chart.get("table_bars") is not False,
                 "layout": {
                     "x": x_position,
                     "y": y_position,

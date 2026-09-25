@@ -216,3 +216,7 @@ the [freemium product plan](docs/FREEMIUM_PLAN.md).
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+### Dashboard workspace refresh
+
+The builder now includes a compact toolbar, searchable data sidebar, persistent global filters, sortable/searchable tables, compact card menus, and save/reset states. See [Builder workspace](docs/BUILDER_WORKSPACE.md) for usage and limitations.

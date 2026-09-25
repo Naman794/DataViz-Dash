@@ -127,7 +127,9 @@ def test_dedicated_builder_page_and_saved_dashboard_route(client):
     assert b"Dashboard page" in builder.data
     assert b"KPI" in builder.data
     assert b"Table" in builder.data
-    assert b"Dashboard filters" not in builder.data
+    assert b'id="builder-start-filter"' in builder.data
+    assert b'id="builder-reset-button"' in builder.data
+    assert b'js/builder-model.js' in builder.data
     assert b'id="builder-view-canvas"' in builder.data
     assert b'id="builder-view-data"' in builder.data
     assert b'id="builder-view-saved"' in builder.data
@@ -619,3 +621,23 @@ def test_visual_limit_counts_charts_across_all_pages(client):
     payload = response.get_json()
     assert payload["feature"] == "charts_per_dashboard"
     assert "across all pages" in payload["error"]
+
+
+def test_builder_preserves_table_format_filters_and_layout(client):
+    dataset = upload_dataset(client)
+    chart = {
+        "id": "table-1", "title": "Sales detail", "type": "table",
+        "x": "Region", "y": "Sales", "aggregation": "none",
+        "table_bars": False, "layout": {"x": 2, "y": 3, "w": 5, "h": 6},
+    }
+    filters = [{"id": "north", "column": "Region", "mode": "category", "value": "North"}]
+    response = client.post("/api/dashboards", json={
+        "title": "Saved table", "dataset_id": dataset["id"],
+        "charts": [chart], "filters": filters,
+    })
+    assert response.status_code == 201
+    dashboard_id = response.get_json()["dashboard"]["id"]
+    restored = client.get(f"/api/dashboards/{dashboard_id}").get_json()["dashboard"]
+    assert restored["charts"][0]["table_bars"] is False
+    assert restored["charts"][0]["layout"] == chart["layout"]
+    assert restored["filters"] == filters

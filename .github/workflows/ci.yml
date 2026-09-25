@@ -34,5 +34,13 @@ jobs:
         run: python -m compileall -q app.py dataviz tests
       - name: Lint Python sources
         run: python -m ruff check app.py dataviz tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check dashboard JavaScript
+        run: |
+          node --check static/js/builder.js
+          node --check static/js/builder-model.js
+          node --test tests/builder-model.test.cjs
       - name: Run tests
         run: python -m pytest -q
