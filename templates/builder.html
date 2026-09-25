@@ -40,20 +40,27 @@
   <main class="builder-page">
     <section class="builder-commandbar">
       <div class="builder-title-block">
-        <span class="eyebrow">ANALYSIS CANVAS</span>
         <input id="builder-dashboard-title" maxlength="100" value="Untitled dashboard" aria-label="Dashboard title">
       </div>
+      <div class="builder-command-actions">
+        <span id="builder-save-state" role="status" aria-live="polite">Not saved</span>
+        <button class="button tertiary compact" id="builder-reset-button" type="button" disabled>Reset</button>
+        <button class="button tertiary compact" id="builder-new-button" type="button">New</button>
+        <button class="button tertiary compact" id="builder-print-button" type="button" disabled>Print / PDF</button>
+        <button class="button primary compact" id="builder-save-button" type="button" disabled>Save</button>
+      </div>
+    </section>
+
+    <section class="builder-main-toolbar" aria-label="Dashboard controls">
+      <button class="button tertiary compact" id="builder-start-visual" type="button">+ Add chart</button>
+      <button class="button tertiary compact" id="builder-start-filter" type="button" disabled>+ Add filter</button>
       <label class="builder-dataset-control">
         <span>Dataset</span>
         <select id="builder-page-dataset"><option value="">Choose a prepared dataset</option></select>
       </label>
-      <div class="builder-command-actions">
-        <span id="builder-save-state">Not saved</span>
-        <button class="button tertiary compact" id="builder-new-button" type="button">New</button>
-        <button class="button tertiary compact" id="builder-print-button" type="button" disabled>Print / PDF</button>
-        <button class="button primary compact" id="builder-save-button" type="button" disabled>Save dashboard</button>
-      </div>
+      <button class="button tertiary compact" id="builder-date-range" type="button" disabled title="Select a dataset with a date column">Date range</button>
     </section>
+    <div class="builder-filter-chips" id="builder-filter-chips" aria-label="Active dashboard filters"></div>
 
     <div class="builder-workbench" id="builder-workbench">
       <nav class="builder-view-rail" aria-label="Builder views">
@@ -78,8 +85,7 @@
         <div class="canvas-toolbar" role="toolbar" aria-label="Canvas controls">
           <div class="canvas-toolbar-group">
             <button id="builder-toggle-grid" type="button" aria-pressed="true" title="Show or hide grid">Grid</button>
-            <span class="canvas-size-label">16:9 · 1280 × 720</span>
-          </div>
+            </div>
           <div class="canvas-toolbar-group">
             <button id="builder-undo" type="button" disabled title="Undo layout change">Undo</button>
             <button id="builder-redo" type="button" disabled title="Redo layout change">Redo</button>
@@ -88,7 +94,7 @@
             <button id="builder-actual-size" type="button">100%</button>
             <button id="builder-zoom-out" type="button" aria-label="Zoom out">−</button>
             <span class="zoom-label" id="builder-zoom-label">100%</span>
-            <button id="builder-zoom-in" type="button" aria-label="Zoom in">＋</button>
+            <button id="builder-zoom-in" type="button" aria-label="Zoom in">+</button>
             <button class="canvas-focus-button" id="builder-focus-canvas" type="button" aria-pressed="false">Focus</button>
           </div>
         </div>
@@ -111,7 +117,7 @@
 
       <aside class="builder-inspector properties-rail">
         <button class="rail-toggle" id="builder-toggle-properties" type="button" aria-label="Collapse inspector" aria-expanded="true" title="Collapse inspector">›</button>
-        <div class="inspector-heading"><span class="rail-kicker">INSPECTOR</span><h2 id="builder-properties-title">Add a visual</h2></div>
+        <div class="inspector-heading"><h2 id="builder-properties-title">Data</h2></div>
         <div class="inspector-tabs" id="builder-inspector-tabs" role="tablist" aria-label="Inspector sections">
           <button type="button" data-inspector-tab="data" role="tab" aria-selected="false">Data</button>
           <button class="active" type="button" data-inspector-tab="build" role="tab" aria-selected="true">Build</button>
@@ -119,7 +125,8 @@
         </div>
 
         <section class="inspector-panel" data-inspector-panel="data" hidden>
-          <div class="rail-heading"><div><span class="rail-kicker">FIELDS</span><h3>Dataset fields</h3></div><span id="builder-field-count">0</span></div>
+          <p id="builder-dataset-summary" class="rail-empty">Choose a dataset to get started.</p>
+          <div class="rail-heading"><div><h3>Dataset fields</h3></div><span id="builder-field-count">0</span></div>
           <input class="rail-search" id="builder-field-search" type="search" placeholder="Search columns" aria-label="Search dataset columns">
           <div class="field-list" id="builder-field-list"><p class="rail-empty">Choose a dataset to inspect its fields.</p></div>
           <div class="field-profile" id="builder-field-profile">
@@ -152,13 +159,14 @@
 
         <section class="inspector-panel" data-inspector-panel="format" hidden>
           <div class="property-form">
+            <label id="builder-table-bars-field" class="field hidden"><span>Table value bars</span><input id="builder-table-bars" type="checkbox" checked></label>
             <div class="property-row">
               <label class="field" id="builder-sort-field"><span>Sort values</span><select id="builder-sort"><option value="default">Dataset order</option><option value="descending">Highest first</option><option value="ascending">Lowest first</option></select></label>
               <label class="field" id="builder-top-field"><span>Limit results</span><select id="builder-top-n"><option value="0">Show all</option><option value="5">Top 5</option><option value="10">Top 10</option><option value="20">Top 20</option></select></label>
             </div>
             <label class="field"><span>Visual width</span><select id="builder-visual-size"><option value="half">Half page</option><option value="full">Full page</option></select></label>
           </div>
-          <div class="builder-tip"><strong>Layout tip</strong><p>Drag cards to reorder them. Use the width control or the resize action on a card to switch between half and full page.</p></div>
+          <div class="builder-tip"><strong>Layout tip</strong><p>Drag a card by its handle to move it. Drag its bottom-right corner to resize. Use Undo to reverse a layout change.</p></div>
         </section>
 
         <div class="inspector-actions">
@@ -169,8 +177,20 @@
     </div>
   </main>
 
+  <dialog id="builder-filter-dialog" class="builder-filter-dialog" aria-labelledby="builder-filter-title">
+    <form id="builder-filter-form">
+      <h2 id="builder-filter-title">Add filter</h2>
+      <p>Applies to every chart and page in this dashboard.</p>
+      <label class="field"><span>Column</span><select id="builder-filter-column" required></select></label>
+      <label class="field"><span>Filter type</span><select id="builder-filter-mode"><option value="category">Exact value</option><option value="number">Number range</option><option value="date">Date range</option><option value="missing">Missing values</option></select></label>
+      <div id="builder-filter-inputs"></div>
+      <p id="builder-filter-error" role="alert"></p>
+      <div class="filter-dialog-actions"><button class="button tertiary compact" id="builder-filter-cancel" type="button">Cancel</button><button class="button primary compact" type="submit">Apply filter</button></div>
+    </form>
+  </dialog>
   <div class="toast" id="builder-toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="{{ url_for('static', filename='js/builder-model.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/builder.js') }}" defer></script>
 </body>
 </html>
