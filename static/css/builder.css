@@ -271,3 +271,23 @@
   #builder-fit-page, #builder-fit-width, #builder-actual-size, #builder-zoom-in, #builder-zoom-out, #builder-zoom-label { display: none; }
   .canvas-toolbar { flex-direction: row; align-items: center; }
 }
+
+.field-button[draggable="true"] { cursor: grab; }
+.field-button[draggable="true"]:active { cursor: grabbing; }
+.canvas-viewport.field-drag-active { outline: 2px dashed #8296ad; outline-offset: -3px; }
+.canvas-viewport.field-drop-target { outline-color: #2563eb; background-color: #eef4fc; }
+.analysis-card.field-drop-card { border-color: #2563eb; box-shadow: inset 0 0 0 2px #2563eb; }
+
+.field-drop-zones { display: none; }
+.field-drag-active .field-drop-zones { display: flex; position: absolute; inset: 48px 8px 8px; z-index: 20; gap: 8px; padding: 8px; background: #ffffffed; }
+.field-drop-zones span { display: grid; place-items: center; flex: 1; text-align: center; border: 2px dashed #8296ad; border-radius: 8px; color: #25456d; font-size: 14px; padding: 12px; }
+.field-drop-zones span:hover { background: #dceafd; border-color: #2563eb; }
+
+
+/* Compact canvas controls keep the workspace focused on field dragging. */
+.dashboard-options { position: relative; }
+.dashboard-options summary { cursor: pointer; padding: 4px 8px; list-style: none; }
+.dashboard-options-menu { position: absolute; top: 100%; left: 0; z-index: 60; width: 230px; padding: 12px; display: grid; gap: 8px; background: white; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #0002; }
+.dashboard-options-menu label { display: grid; gap: 6px; font-size: 12px; }
+.dashboard-options-menu input { width: 100%; box-sizing: border-box; }
+#builder-save-state { font-size: 11px; color: var(--muted); }

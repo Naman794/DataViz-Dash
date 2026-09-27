@@ -31,7 +31,23 @@
     const samples = rows.map((row) => row[column]).filter((value) => !missing(value)).slice(0, 100);
     return samples.length && samples.every((value) => date(value)) ? 'date' : 'text';
   }
-  const model = { missing, date, filterRows, fieldType };
+  function chartFromField(existing, column, type, role) {
+    if (!existing) return { title: type === 'number' ? `Distribution of ${column}` : `Count by ${column}`, type: type === 'number' ? 'histogram' : (type === 'date' ? 'line' : 'bar'), x: column, y: null, aggregation: type === 'number' ? 'none' : 'count', sort: 'default', top_n: 0, date_group: 'none', table_bars: true };
+    const chart = { ...existing };
+    if (chart.type === 'histogram') {
+      chart.x = column;
+      if (type !== 'number') { chart.type = type === 'date' ? 'line' : 'bar'; chart.aggregation = 'count'; }
+      chart.y = null;
+    } else if (type === 'number' && role !== 'category') {
+      chart.y = column;
+      if (!['table', 'scatter'].includes(chart.type) && ['none', 'count'].includes(chart.aggregation)) chart.aggregation = 'sum';
+    } else {
+      chart.x = column;
+      chart.date_group = 'none';
+    }
+    return chart;
+  }
+  const model = { missing, date, filterRows, fieldType, chartFromField };
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
   else root.BuilderModel = model;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

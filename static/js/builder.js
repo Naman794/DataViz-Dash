@@ -1,4 +1,5 @@
 const builderState = {
+  draggedField: null,
   datasets: [],
   dashboards: [],
   dataset: null,
@@ -122,6 +123,7 @@ function bindBuilderEvents() {
   window.addEventListener("beforeunload", (event) => {
     if (builderState.dirty || builderState.saving) { event.preventDefault(); event.returnValue = ""; }
   });
+  bindFieldDropEvents();
   restoreBuilderLayout();
   if (window.innerWidth <= 1180) { builderElements["builder-workbench"].classList.add("properties-collapsed"); updateBuilderLayoutControls(); }
   window.addEventListener("resize", () => {
@@ -359,10 +361,9 @@ function toggleCanvasFocus() {
 }
 
 function resizeCanvasPlots() {
-  window.setTimeout(() => {
-    if (!window.Plotly?.Plots) return;
-    document.querySelectorAll(".js-plotly-plot").forEach((plot) => window.Plotly.Plots.resize(plot));
-  }, 220);
+  // Rebuild through the same queue; never resize a plot that is being purged.
+  clearTimeout(resizeCanvasPlots.timer);
+  resizeCanvasPlots.timer = window.setTimeout(renderVisuals, 220);
 }
 
 async function builderApi(url, options = {}) {
@@ -475,7 +476,7 @@ function populateFieldSelects() {
 
 function updateCanvasDescription() {
   if (!builderState.dataset) {
-    builderElements["builder-canvas-description"].textContent = "Select a dataset, then add your first visual.";
+    builderElements["builder-canvas-description"].textContent = "Select a dataset, then drag a field onto the canvas.";
     return;
   }
   builderElements["builder-canvas-description"].textContent = builderState.rowsTruncated
@@ -602,6 +603,17 @@ function renderFields() {
     const label = document.createElement("small");
     label.textContent = type;
     button.append(icon, name, label);
+    button.draggable = true;
+    button.title = `Drag ${column} onto the canvas to create a chart, or onto a chart to change its field`;
+    button.addEventListener("dragstart", (event) => {
+      builderState.draggedField = { column, datasetId: builderState.dataset.id };
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData("application/x-dataviz-field", JSON.stringify(builderState.draggedField));
+      event.dataTransfer.setData("text/plain", column);
+      builderElements["builder-canvas-viewport"].classList.add("field-drag-active");
+    });
+    button.addEventListener("dragend", clearFieldDrag);
+
     button.addEventListener("click", () => {
       builderState.selectedField = column;
       if (!builderElements["builder-x-column"].value) builderElements["builder-x-column"].value = column;
@@ -755,7 +767,27 @@ function saveVisual() {
   markUnsaved();
 }
 
+let visualRenderQueued = false;
+let visualRenderRunning = false;
 function renderVisuals() {
+  visualRenderQueued = true;
+  if (visualRenderRunning) return;
+  visualRenderRunning = true;
+  window.requestAnimationFrame(async () => {
+    try {
+      while (visualRenderQueued) {
+        visualRenderQueued = false;
+        await renderVisualsNow();
+      }
+    } catch (error) {
+      showBuilderToast(`Unable to render dashboard: ${error.message}`, true);
+    } finally {
+      visualRenderRunning = false;
+    }
+  });
+}
+
+async function renderVisualsNow() {
   const grid = builderElements["builder-analysis-grid"];
   grid.querySelectorAll(".js-plotly-plot").forEach((plot) => window.Plotly?.purge(plot));
   grid.replaceChildren();
@@ -765,12 +797,12 @@ function renderVisuals() {
   if (!builderState.charts.length) {
     const empty = document.createElement("div");
     empty.className = "analysis-empty";
-    empty.innerHTML = "<span>⌁</span><h2>Build your first visual</h2><p>Select a dataset, then choose a chart, KPI, or table.</p>";
+    empty.innerHTML = builderState.dataset ? "<span>⌁</span><h2>Drag a field here</h2><p>Drag a field from the Data panel to create a chart. Drop another field onto its Category or Value target to update it.</p>" : "<span>⌁</span><h2>Choose your data</h2><p>Select a dataset above, then drag its fields onto this canvas.</p>";
     const actions = document.createElement("div");
     actions.className = "analysis-empty-actions";
     const datasetButton = smallButton("Select dataset", "Select a dataset", () => builderElements["builder-page-dataset"].focus());
     datasetButton.className = "button secondary compact";
-    const visualButton = smallButton("Add visual", "Configure a visual", () => {
+    const visualButton = smallButton("Configure manually", "Configure a visual", () => {
       if (!builderState.dataset) {
         builderElements["builder-page-dataset"].focus();
         return showBuilderToast("Choose a dataset first.", true);
@@ -782,12 +814,14 @@ function renderVisuals() {
       builderElements["builder-x-column"].focus();
     });
     visualButton.className = "button primary compact";
-    actions.append(datasetButton, visualButton);
+    if (!builderState.dataset) actions.append(datasetButton);
+    else actions.append(visualButton);
     empty.append(actions);
     grid.append(empty);
     window.requestAnimationFrame(syncPageShellSize);
     return;
   }
+  const plotJobs = [];
   builderState.charts.forEach((chart, index) => {
     chart.layout = normaliseLayout(chart, index).layout;
     const card = document.createElement("article");
@@ -805,6 +839,17 @@ function renderVisuals() {
     const titleButton = smallButton(chart.title, `Edit ${chart.title}`, () => editVisual(chart.id));
     title.append(titleButton);
     card.append(title);
+    const dropZones = document.createElement("div");
+    dropZones.className = "field-drop-zones";
+    ["category", "value"].forEach((role) => {
+      if (chart.type === "histogram" && role === "value") return;
+      const zone = document.createElement("span");
+      zone.dataset.fieldRole = role;
+      zone.textContent = role === "category" ? "Drop category / X-axis" : "Drop numeric value / Y-axis";
+      dropZones.append(zone);
+    });
+    card.append(dropZones);
+    grid.append(card);
     if (!builderState.dataset?.columns.includes(chart.x) || (chart.y && !builderState.dataset.columns.includes(chart.y))) {
       const message = document.createElement("p");
       message.className = "visual-empty";
@@ -817,7 +862,7 @@ function renderVisuals() {
       card.append(message);
     } else if (chart.type === "kpi") renderKpi(card, chart);
     else if (chart.type === "table") renderDataTable(card, chart);
-    else renderPlot(card, chart);
+    else plotJobs.push(renderPlot(card, chart));
     const resizeHandle = document.createElement("button");
     resizeHandle.type = "button";
     resizeHandle.className = "visual-resize-handle";
@@ -825,8 +870,8 @@ function renderVisuals() {
     resizeHandle.setAttribute("aria-label", "Resize visual");
     card.append(resizeHandle);
     bindCardResize(card, chart, resizeHandle);
-    grid.append(card);
   });
+  await Promise.all(plotJobs);
   window.requestAnimationFrame(syncPageShellSize);
 }
 
@@ -1002,7 +1047,7 @@ function duplicateVisual(chart) {
   markUnsaved();
 }
 
-function renderPlot(card, chart) {
+async function renderPlot(card, chart) {
   const plot = document.createElement("div");
   plot.className = "analysis-plot";
   card.append(plot);
@@ -1011,7 +1056,10 @@ function renderPlot(card, chart) {
     return;
   }
   const trace = buildBuilderTrace(chart);
-  Plotly.react(plot, [trace], {
+  try {
+  await Plotly.react(plot, [trace], {
+    width: plot.clientWidth,
+    height: Math.max(100, card.clientHeight - 48),
 
     margin: { t: 16, r: 24, b: 54, l: 56 },
     paper_bgcolor: "#fff",
@@ -1022,10 +1070,16 @@ function renderPlot(card, chart) {
     font: { family: "DM Sans", color: "#667078" },
     showlegend: chart.type === "pie",
   }, {
-    responsive: true,
+    responsive: false,
     displaylogo: false,
     toImageButtonOptions: { format: "png", filename: slugifyBuilder(chart.title), scale: 2 },
   });
+  } catch (error) {
+    if (plot.isConnected) {
+      window.Plotly.purge(plot);
+      plot.textContent = "This chart could not render. Edit its fields or reload to retry.";
+    }
+  }
 }
 
 function buildBuilderTrace(chart) {
@@ -1550,4 +1604,60 @@ function resetDashboard() {
   updateHistoryButtons();
   renderPageTabs();
   applyDashboardFilters();
+}
+
+
+function clearFieldDrag() {
+  builderState.draggedField = null;
+  builderElements["builder-canvas-viewport"].classList.remove("field-drag-active", "field-drop-target");
+  document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+}
+
+function bindFieldDropEvents() {
+  const viewport = builderElements["builder-canvas-viewport"];
+  viewport.addEventListener("dragover", (event) => {
+    if (!builderState.draggedField || builderState.draggedField.datasetId !== builderState.dataset?.id) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    viewport.classList.add("field-drop-target");
+    document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+    event.target.closest(".analysis-card")?.classList.add("field-drop-card");
+  });
+  viewport.addEventListener("dragleave", (event) => {
+    if (!viewport.contains(event.relatedTarget)) {
+      viewport.classList.remove("field-drop-target");
+      document.querySelectorAll(".field-drop-card").forEach((card) => card.classList.remove("field-drop-card"));
+    }
+  });
+  viewport.addEventListener("drop", (event) => {
+    const field = builderState.draggedField;
+    if (!field) return;
+    event.preventDefault();
+    const cardId = event.target.closest(".analysis-card")?.dataset.chartId;
+    const role = event.target.closest("[data-field-role]")?.dataset.fieldRole;
+    clearFieldDrag();
+    if (field.datasetId !== builderState.dataset?.id || !builderState.dataset.columns.includes(field.column)) return;
+    const existing = builderState.charts.find((chart) => chart.id === cardId);
+    if (!existing && totalVisuals() >= builderLimits.maxCharts) return showBuilderToast(`Your plan supports up to ${builderLimits.maxCharts} visuals.`, true);
+    const type = BuilderModel.fieldType(builderState.dataset, builderState.sourceRows, field.column);
+    if (role === "value" && type !== "number") return showBuilderToast("Drop a numeric field into Value. Use Category for text or dates.", true);
+    const chart = BuilderModel.chartFromField(existing, field.column, type, role);
+    if (!existing) {
+      chart.id = makeBuilderId("visual");
+      chart.size = "half";
+      const grid = builderElements["builder-analysis-grid"];
+      const bounds = grid.getBoundingClientRect();
+      const style = window.getComputedStyle(grid);
+      const metrics = gridPointerMetrics();
+      const candidate = { x: Math.max(0, Math.min(6, Math.floor((event.clientX - bounds.left - parseFloat(style.paddingLeft) * builderState.canvasZoom) / metrics.columnStride))), y: Math.max(0, Math.floor((event.clientY - bounds.top - parseFloat(style.paddingTop) * builderState.canvasZoom) / metrics.rowStride)), w: 6, h: 7 };
+      chart.layout = layoutCollides(candidate, chart.id) ? findAvailableLayout() : candidate;
+    }
+    recordLayoutHistory();
+    if (existing) setCharts(builderState.charts.map((item) => item.id === existing.id ? chart : item));
+    else setCharts([...builderState.charts, chart]);
+    renderPageTabs();
+    renderVisuals();
+    markUnsaved();
+    showBuilderToast(existing ? `Updated chart with ${field.column}.` : `Created chart from ${field.column}.`);
+  });
 }
