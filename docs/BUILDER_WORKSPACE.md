@@ -1,9 +1,22 @@
 # Dashboard workspace
 
-The builder uses a compact title and save bar, a dataset/chart/filter toolbar,
-a large canvas, and a searchable data sidebar. Select Add chart to configure a
-visual. Select a card title or its Edit menu item to change it. Clicking the
-empty canvas returns to the data fields. Existing dashboards remain compatible.
+The builder uses a dataset selector, a large canvas, and a searchable Data sidebar.
+After loading data, drag fields onto the canvas to build charts. The former title
+and action row and Add chart/Add filter buttons have been removed. Save and status
+sit in the canvas toolbar; its options menu contains naming, New, Reset, Print,
+manual chart configuration and filters. Existing dashboards remain compatible.
+
+## Drag fields onto the dashboard
+
+Drag a field from the right-side Data list to the canvas. Text fields create a
+count-by-category bar chart, dates create a count-by-date line chart, and numbers
+create a distribution histogram. Drop onto an existing card to replace its
+category or numeric value using its explicit drop targets. Text/date fields are
+rejected by the Value target. Histogram drops replace the histogram
+field. Existing chart titles and layouts are preserved. Changes support Undo,
+Redo and Save. The canvas and destination card highlight during dragging.
+Desktop browsers support this interaction; manual configuration in the Build tab and options menu remains available
+for touch and keyboard use.
 
 ## Controls
 
@@ -36,3 +49,9 @@ The older retention/Sheet URL changes remain in separate PR #21.
 Run `python -m pytest -q`, `python -m ruff check app.py dataviz tests`,
 `node --check static/js/builder.js`, and `node --test tests/builder-model.test.cjs`.
 The JavaScript tests use Node's built-in runner with no npm dependencies.
+
+The optional DOM interaction regression test is `node tests/builder-field-drop.cjs`
+with `jsdom` installed. It checks drops, Undo, stale/unknown fields and chart limits.
+
+The async rendering regression is `node tests/builder-render.cjs` (requires jsdom).
+Both DOM regression scripts run in CI.

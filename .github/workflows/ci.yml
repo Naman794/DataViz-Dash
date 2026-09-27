@@ -42,5 +42,10 @@ jobs:
           node --check static/js/builder.js
           node --check static/js/builder-model.js
           node --test tests/builder-model.test.cjs
+      - name: Check drag-and-drop and async chart rendering
+        run: |
+          npm install --no-save --package-lock=false jsdom@26
+          node tests/builder-field-drop.cjs
+          node tests/builder-render.cjs
       - name: Run tests
         run: python -m pytest -q

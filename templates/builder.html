@@ -38,22 +38,7 @@
   </header>
 
   <main class="builder-page">
-    <section class="builder-commandbar">
-      <div class="builder-title-block">
-        <input id="builder-dashboard-title" maxlength="100" value="Untitled dashboard" aria-label="Dashboard title">
-      </div>
-      <div class="builder-command-actions">
-        <span id="builder-save-state" role="status" aria-live="polite">Not saved</span>
-        <button class="button tertiary compact" id="builder-reset-button" type="button" disabled>Reset</button>
-        <button class="button tertiary compact" id="builder-new-button" type="button">New</button>
-        <button class="button tertiary compact" id="builder-print-button" type="button" disabled>Print / PDF</button>
-        <button class="button primary compact" id="builder-save-button" type="button" disabled>Save</button>
-      </div>
-    </section>
-
     <section class="builder-main-toolbar" aria-label="Dashboard controls">
-      <button class="button tertiary compact" id="builder-start-visual" type="button">+ Add chart</button>
-      <button class="button tertiary compact" id="builder-start-filter" type="button" disabled>+ Add filter</button>
       <label class="builder-dataset-control">
         <span>Dataset</span>
         <select id="builder-page-dataset"><option value="">Choose a prepared dataset</option></select>
@@ -78,12 +63,25 @@
 
       <section class="analysis-canvas">
         <div class="canvas-heading">
-          <div><h1>Dashboard page</h1><p id="builder-canvas-description">Select a dataset, then add your first visual.</p></div>
+          <div><h1>Dashboard page</h1><p id="builder-canvas-description">Select a dataset, then drag a field onto the canvas.</p></div>
           <span class="visual-count" id="builder-visual-count">0 visuals</span>
         </div>
 
         <div class="canvas-toolbar" role="toolbar" aria-label="Canvas controls">
           <div class="canvas-toolbar-group">
+            <span id="builder-save-state" role="status" aria-live="polite">Not saved</span>
+            <button id="builder-save-button" type="button" disabled>Save</button>
+            <details class="dashboard-options">
+              <summary aria-label="Dashboard options">•••</summary>
+              <div class="dashboard-options-menu">
+                <label>Dashboard name<input id="builder-dashboard-title" maxlength="100" value="Untitled dashboard"></label>
+                <button id="builder-new-button" type="button">New dashboard</button>
+                <button id="builder-reset-button" type="button" disabled>Reset changes</button>
+                <button id="builder-print-button" type="button" disabled>Print / PDF</button>
+                <button id="builder-start-visual" type="button">Configure chart</button>
+                <button id="builder-start-filter" type="button" disabled>Filter data</button>
+              </div>
+            </details>
             <button id="builder-toggle-grid" type="button" aria-pressed="true" title="Show or hide grid">Grid</button>
             </div>
           <div class="canvas-toolbar-group">
@@ -106,7 +104,7 @@
                 <div class="analysis-empty">
                   <span>⌁</span>
                   <h2>Build your first visual</h2>
-                  <p>Select a dataset, then choose a chart, KPI, or table.</p>
+                  <p>Drag a field from the Data panel onto this canvas.</p>
                 </div>
               </div>
             </div>
