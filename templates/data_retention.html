@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DataViz Dash workspace data retention and deletion policy.">
+  <title>Data retention policy · DataViz Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docs.css') }}">
+</head>
+<body class="docs-body">
+  <header class="docs-header">
+    <a class="brand" href="{{ url_for('main.landing') }}">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>DataViz <strong>Dash</strong></span>
+    </a>
+    <nav aria-label="Policy navigation">
+      <a href="{{ url_for('main.documentation') }}">Docs</a>
+      <a href="{{ url_for('main.pricing') }}">Plans</a>
+      <a class="button primary compact" href="{{ url_for('main.index') }}">Open workspace</a>
+    </nav>
+  </header>
+
+  <main class="docs-content retention-policy">
+    <section class="docs-hero">
+      <span class="eyebrow">EFFECTIVE 2 SEPTEMBER 2026</span>
+      <h1>Workspace data retention policy</h1>
+      <p>To keep storage costs predictable, DataViz Dash retains standard workspace content for {{ retention_days }} days from the date it is created.</p>
+      <div class="docs-callout">
+        <strong>Automatic deletion after {{ retention_days }} days</strong>
+        <p>Uploaded datasets, stored rows, cleaned working copies, sample datasets, and saved dashboards are permanently deleted when their individual retention period ends.</p>
+      </div>
+    </section>
+
+    <section class="docs-section">
+      <span class="docs-number">01</span>
+      <h2>What is deleted</h2>
+      <ul>
+        <li>Uploaded CSV, XLS, and XLSX dataset content stored in the workspace.</li>
+        <li>Derived rows and cleaned working copies created from those uploads.</li>
+        <li>Sample datasets created through the one-click demo.</li>
+        <li>Saved dashboards, pages, charts, layouts, and filters.</li>
+      </ul>
+      <p>Editing, cleaning, viewing, or signing in does not restart the retention period. The deadline is based on the original creation date of each dataset or dashboard.</p>
+    </section>
+
+    <section class="docs-section">
+      <span class="docs-number">02</span>
+      <h2>Before your data expires</h2>
+      <p>Download cleaned datasets and export dashboard output before the displayed expiry date. Automatic deletion is permanent and deleted workspace content cannot be restored through DataViz Dash.</p>
+    </section>
+
+    <section class="docs-section">
+      <span class="docs-number">03</span>
+      <h2>Extended Storage add-on</h2>
+      <p>If you need workspace data beyond {{ retention_days }} days, apply for the separate <b>Extended Storage</b> add-on before the data expires.</p>
+      <ul>
+        <li>Designed only for longer workspace-data retention.</li>
+        <li>Purchased separately from Free, Pro, Business, or Agency access.</li>
+        <li>Retention period and storage capacity are agreed for the account.</li>
+        <li>Pricing is provided as a custom quote until self-serve billing is available.</li>
+      </ul>
+      <a class="button primary" href="{{ url_for('main.pricing') }}">View storage option</a>
+    </section>
+
+    <section class="docs-section">
+      <span class="docs-number">04</span>
+      <h2>Records kept separately</h2>
+      <p>Account identity, authentication, security, fraud-prevention, billing, and legally required operational records are not workspace content. They may be retained as needed to operate the account, meet legal obligations, resolve disputes, and protect the service.</p>
+    </section>
+  </main>
+</body>
+</html>

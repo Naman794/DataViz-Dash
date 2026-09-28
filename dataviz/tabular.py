@@ -43,7 +43,7 @@ def parse_upload(
 
     try:
         if extension == ".csv":
-            frame = _parse_csv_payload(payload, max_rows)
+            frame = pd.read_csv(BytesIO(payload), nrows=max_rows + 1)
         else:
             frame = pd.read_excel(BytesIO(payload), nrows=max_rows + 1)
     except Exception as exc:
@@ -61,39 +61,6 @@ def parse_upload(
 
     frame.columns = _unique_column_names(frame.columns)
     return frame.reset_index(drop=True)
-
-
-def parse_csv_bytes(
-    payload: bytes, max_rows: int, max_bytes: int | None = None
-) -> pd.DataFrame:
-    """Parse a bounded CSV payload from a trusted connector transport."""
-    if not payload:
-        raise DataValidationError("The sheet does not contain any data.")
-    if max_bytes is not None and len(payload) > max_bytes:
-        max_mb = max_bytes // (1024 * 1024)
-        raise DataLimitError(
-            f"The sheet is too large. Maximum source size is {max_mb} MB.",
-            "upload_size",
-        )
-    try:
-        frame = _parse_csv_payload(payload, max_rows)
-    except Exception as exc:
-        raise DataValidationError(
-            "The sheet data could not be read as a table."
-        ) from exc
-    if len(frame) > max_rows:
-        raise DataLimitError(
-            f"This workspace supports up to {max_rows:,} rows per dataset.",
-            "dataset_rows",
-        )
-    if frame.empty and len(frame.columns) == 0:
-        raise DataValidationError("The sheet does not contain a table.")
-    frame.columns = _unique_column_names(frame.columns)
-    return frame.reset_index(drop=True)
-
-
-def _parse_csv_payload(payload: bytes, max_rows: int) -> pd.DataFrame:
-    return pd.read_csv(BytesIO(payload), nrows=max_rows + 1)
 
 
 def clean_frame(frame: pd.DataFrame, operations: dict) -> tuple[pd.DataFrame, dict]:

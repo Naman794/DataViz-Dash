@@ -20,12 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
 function cacheElements() {
   [
     "page-title", "db-status", "refresh-button", "upload-card", "file-input",
-    "choose-file-button", "sample-data-button", "upload-progress", "google-sheet-form",
-    "google-sheet-url", "connect-google-sheet-button", "dataset-select", "refresh-sheet-button", "download-data-button",
-    "delete-data-button", "dataset-workspace", "row-count", "column-count",
+    "choose-file-button", "sample-data-button", "upload-progress", "dataset-select", "download-data-button",
+    "delete-data-button", "dataset-workspace", "dataset-expiry", "row-count", "column-count",
     "preview-count", "column-rules", "missing-strategy", "fill-value-field",
     "fill-value", "missing-columns", "remove-duplicates", "remove-empty",
-    "cleaning-summary", "apply-cleaning-button", "preview-table", "dataset-source-status", "toast",
+    "cleaning-summary", "apply-cleaning-button", "preview-table", "toast",
   ].forEach((id) => { elements[id] = document.getElementById(id); });
 }
 
@@ -33,7 +32,6 @@ function bindEvents() {
   elements["choose-file-button"].addEventListener("click", () => elements["file-input"].click());
   elements["sample-data-button"].addEventListener("click", openSampleDashboard);
   elements["file-input"].addEventListener("change", () => uploadFile(elements["file-input"].files[0]));
-  elements["google-sheet-form"].addEventListener("submit", connectGoogleSheet);
   ["dragenter", "dragover"].forEach((eventName) => {
     elements["upload-card"].addEventListener(eventName, (event) => {
       event.preventDefault();
@@ -52,7 +50,6 @@ function bindEvents() {
   elements["missing-strategy"].addEventListener("change", toggleMissingValueField);
   elements["apply-cleaning-button"].addEventListener("click", applyCleaning);
   elements["download-data-button"].addEventListener("click", downloadCurrentDataset);
-  elements["refresh-sheet-button"].addEventListener("click", refreshCurrentSheet);
   elements["delete-data-button"].addEventListener("click", deleteCurrentDataset);
   elements["refresh-button"].addEventListener("click", refreshWorkspace);
 }
@@ -130,60 +127,6 @@ async function uploadFile(file) {
   }
 }
 
-async function connectGoogleSheet(event) {
-  event.preventDefault();
-  const url = elements["google-sheet-url"].value.trim();
-  if (!url) return;
-  setSheetConnecting(true);
-  try {
-    const result = await api("/api/google-sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    state.currentDataset = result.dataset;
-    state.rows = result.rows;
-    await loadDatasets();
-    elements["dataset-select"].value = result.dataset.id;
-    elements["google-sheet-url"].value = "";
-    renderDatasetWorkspace();
-    showToast("Google Sheet connected successfully.");
-  } catch (error) {
-    showToast(error.message, true);
-  } finally {
-    setSheetConnecting(false);
-  }
-}
-
-function setSheetConnecting(isLoading) {
-  elements["connect-google-sheet-button"].disabled = isLoading;
-  elements["google-sheet-url"].disabled = isLoading;
-  elements["connect-google-sheet-button"].textContent = isLoading
-    ? "Connecting…"
-    : "Connect sheet";
-}
-
-async function refreshCurrentSheet() {
-  if (!state.currentDataset || state.currentDataset.source_type !== "google_sheet") return;
-  elements["refresh-sheet-button"].disabled = true;
-  elements["refresh-sheet-button"].textContent = "Refreshing…";
-  try {
-    const result = await api(`/api/datasets/${state.currentDataset.id}/refresh`, { method: "POST" });
-    state.currentDataset = result.dataset;
-    state.rows = result.rows;
-    await loadDatasets();
-    elements["dataset-select"].value = result.dataset.id;
-    renderDatasetWorkspace();
-    showToast("Google Sheet data refreshed.");
-  } catch (error) {
-    showToast(error.message, true);
-    await selectDataset(state.currentDataset.id);
-  } finally {
-    elements["refresh-sheet-button"].disabled = false;
-    elements["refresh-sheet-button"].textContent = "Refresh now";
-  }
-}
-
 async function openSampleDashboard() {
   setDemoLoading(true);
   try {
@@ -256,8 +199,6 @@ function clearDatasetWorkspace() {
   elements["dataset-workspace"].classList.add("hidden");
   elements["download-data-button"].disabled = true;
   elements["delete-data-button"].disabled = true;
-  elements["refresh-sheet-button"].classList.add("hidden");
-  elements["dataset-source-status"].classList.add("hidden");
 }
 
 function renderDatasetWorkspace() {
@@ -266,32 +207,15 @@ function renderDatasetWorkspace() {
   elements["dataset-workspace"].classList.remove("hidden");
   elements["download-data-button"].disabled = false;
   elements["delete-data-button"].disabled = false;
-  renderSourceStatus(dataset);
+  const expiry = new Date(dataset.expires_at);
+  elements["dataset-expiry"].textContent = Number.isNaN(expiry.getTime())
+    ? "This dataset follows the 90-day workspace retention policy."
+    : `Scheduled for permanent deletion on ${expiry.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}. Export anything you need before then.`;
   elements["row-count"].textContent = dataset.row_count.toLocaleString();
   elements["column-count"].textContent = dataset.columns.length.toLocaleString();
   elements["preview-count"].textContent = state.rows.length.toLocaleString();
   renderCleaningFields(dataset.columns);
   renderPreview(dataset.columns, state.rows);
-}
-
-function renderSourceStatus(dataset) {
-  const isSheet = dataset.source_type === "google_sheet";
-  elements["refresh-sheet-button"].classList.toggle("hidden", !isSheet);
-  elements["dataset-source-status"].classList.toggle("hidden", !isSheet);
-  if (!isSheet) return;
-  const failed = dataset.last_sync_status === "failed";
-  elements["dataset-source-status"].classList.toggle("failed", failed);
-  const syncedAt = dataset.last_synced_at
-    ? new Date(dataset.last_synced_at).toLocaleString()
-    : "Not synced yet";
-  const detail = failed
-    ? dataset.last_sync_error || "The last refresh failed. Your previous data is still available."
-    : `Last refreshed ${syncedAt} · worksheet tab ${dataset.source_sheet_gid}`;
-  elements["dataset-source-status"].innerHTML = `
-    <div><strong>${failed ? "Google Sheet refresh needs attention" : "Connected Google Sheet"}</strong><span></span></div>
-    <small>Manual refresh</small>
-  `;
-  elements["dataset-source-status"].querySelector("span").textContent = detail;
 }
 
 function renderCleaningFields(columns) {
